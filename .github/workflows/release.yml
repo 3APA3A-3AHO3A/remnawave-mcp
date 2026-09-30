@@ -13,6 +13,7 @@ on:
 
 permissions:
   contents: write
+  packages: write
 
 # релиз с сайта создаёт и тег, и релиз — два запуска идут по очереди, второй просто обновит файлы
 concurrency:
@@ -52,6 +53,7 @@ jobs:
 
           ---
           **Установка в Claude Desktop:** скачайте файл под версию своей панели (версия видна внизу панели Remnawave): `remnawave-3.4.mcpb` для 3.4.x, `remnawave-3.3.mcpb` для 3.3.x и т.д. → откройте двойным щелчком (или Claude → Настройки → Расширения → перетащите файл) → укажите адрес панели и API-токен (только права `read`).
+          **Сервер с панелью (Claude Code + Docker):** `ghcr.io/<владелец>/remnawave-mcp:3.4` (и `:3.3` … `:3.0`) — см. README, раздел «Docker».
           **Install in Claude Desktop:** download the file for your panel version (shown at the bottom of the Remnawave panel): `remnawave-3.4.mcpb` for 3.4.x, `remnawave-3.3.mcpb` for 3.3.x, etc. → double-click it (or drag it into Claude → Settings → Extensions) → enter the panel URL and an API token (read scopes only).
           TXT
 
@@ -64,3 +66,54 @@ jobs:
           else
             gh release create "$TAG" build/*.mcpb --title "$TAG" --notes-file notes.md
           fi
+
+  # Docker-образы для Claude Code на сервере: по образу на версию панели 3.x, amd64 + arm64
+  docker-targets:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.t.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name || github.ref }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - id: t
+        run: echo "matrix=$(node scripts/build-mcpb.mjs --print-targets)" >> "$GITHUB_OUTPUT"
+
+  docker:
+    needs: [release, docker-targets]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: ${{ fromJson(needs.docker-targets.outputs.matrix) }}
+    env:
+      TAG: ${{ github.event.release.tag_name || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name || github.ref }}
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Теги образа
+        id: tags
+        run: |
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}"
+          V="${TAG#v}"
+          M="${{ matrix.target.minor }}"
+          TAGS="$IMAGE:$M,$IMAGE:$M-$V"
+          if [ "${{ matrix.target.latest }}" = "true" ]; then TAGS="$TAGS,$IMAGE:latest,$IMAGE:$V"; fi
+          echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: CONTRACT_VERSION=${{ matrix.target.contract }}
+          tags: ${{ steps.tags.outputs.tags }}

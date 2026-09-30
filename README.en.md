@@ -13,7 +13,7 @@ MCP server for the [Remnawave](https://github.com/remnawave) **3.x** panel. It l
 - **Ready-made reports in one call:** `panel_overview` (panel summary), `user_report` (everything about a client), `sharing_suspects` (who shares a subscription), plus `find_user`, `geocheck_node`, `node_connections`, `user_connections`.
 - **Prompt templates** in the Claude menu: "Panel summary", "Client review", "Sharing audit", "Node check".
 - **Gentle on nodes and limits:** a repeated GeoCheck of the same node within 30 minutes returns the previous result; responses are compacted (2–3× fewer tokens), the node list is short by default (`full: true` for the raw one).
-- **One-click install** — a `.mcpb` extension for Claude Desktop; the token is kept in the system keychain.
+- **One-click install** — a `.mcpb` extension for Claude Desktop; the token is kept in the system keychain. For servers — a **Docker image** per panel version.
 
 ## Compatibility
 
@@ -91,6 +91,38 @@ claude mcp add remnawave --scope user -e REMNAWAVE_BASE_URL=https://panel.exampl
 - Avoid `--scope project`: it writes the server with its token into `.mcp.json`, which usually ends up in git.
 - Check: `claude mcp list` — the server should be `✓ Connected`.
 
+### Option 3 — Docker on the panel server (Claude Code)
+
+If Claude Code runs on the server that hosts the panel, you don't need Node.js — Docker is already there (Remnawave itself runs in Docker).
+
+```bash
+claude mcp add remnawave --scope user \
+  -e REMNAWAVE_BASE_URL=https://panel.example.com \
+  -e REMNAWAVE_API_TOKEN=YOUR_TOKEN \
+  -- docker run -i --rm -e REMNAWAVE_BASE_URL -e REMNAWAVE_API_TOKEN ghcr.io/3apa3a-3aho3a/remnawave-mcp:3.4
+```
+
+- `:3.4` — image for panel 3.4.x; there are also `:3.3`, `:3.2`, `:3.1`, `:3.0` and `:latest` (current stable). amd64 and arm64.
+- `-e REMNAWAVE_API_TOKEN` without a value passes the token from the environment, so it doesn't show up in the process list (`ps`).
+- Update: `docker pull ghcr.io/3apa3a-3aho3a/remnawave-mcp:3.4`.
+- Check: `claude mcp list` → `✓ Connected`.
+
+**Straight to the panel container**, bypassing nginx / Cloudflare and the internet — attach the MCP to the panel's Docker network:
+
+```bash
+docker network ls                      # the default install uses remnawave-network
+docker ps --format '{{.Names}}'        # the panel container is usually remnawave
+
+claude mcp add remnawave --scope user \
+  -e REMNAWAVE_BASE_URL=http://remnawave:3000 \
+  -e REMNAWAVE_API_TOKEN=YOUR_TOKEN \
+  -- docker run -i --rm --network remnawave-network -e REMNAWAVE_BASE_URL -e REMNAWAVE_API_TOKEN ghcr.io/3apa3a-3aho3a/remnawave-mcp:3.4
+```
+
+With an `http://…` URL the server adds the headers a reverse proxy normally sets (`X-Forwarded-Proto`, `X-Forwarded-For`). If the panel still returns an error, use the external `https://` URL from the first example.
+
+> ⚠ **Security.** The MCP gives Claude convenient tools and hides secrets, but it does **not** sandbox Claude Code: with shell access to the server it can run any command. Run Claude Code on a production server **not as root**, don't enable "allow everything", and give the panel token `read` scopes only.
+
 ## API token
 
 **Panel → Settings → API tokens → Create.** Grant `read` only:
@@ -139,6 +171,7 @@ Full example: [`examples/claude_desktop_config.example.json`](examples/claude_de
 | `REMNAWAVE_PRIVACY` | no | `strict` by default, `basic` or `off` — see [Privacy](#privacy) |
 | `REMNAWAVE_PRIVACY_SALT` | no | Any long string — keeps pseudonyms stable across restarts |
 | `REMNAWAVE_API_KEY` | no | `X-Api-Key` header — panel behind Caddy with a secret path |
+| `REMNAWAVE_HEADERS` | no | Extra headers for every request, JSON: `{"X-Name": "value"}` |
 | `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET` | no | Panel behind Cloudflare Access |
 | `REMNAWAVE_TOOLS_EXCLUDE` | no | Hide tools (comma-separated) |
 | `REMNAWAVE_TOOLS_INCLUDE` | no | Expose only these tools |
@@ -221,7 +254,7 @@ src/
 ## For developers
 
 ```bash
-npm test                    # 36 tests: privacy (nothing leaks), reports, limits, tool list
+npm test                    # 40 tests: privacy (nothing leaks), reports, limits, tool list
 npm run pack:mcpb           # extension for the current version → build/remnawave-3.4.mcpb
 npm run pack:mcpb -- --all  # for every 3.x version → build/remnawave-3.0.mcpb … remnawave-3.4.mcpb
 ```

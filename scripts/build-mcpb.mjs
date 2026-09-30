@@ -2,6 +2,7 @@
 //
 //   npm run pack:mcpb            → one file for the contract in package.json (e.g. remnawave-3.4.mcpb)
 //   npm run pack:mcpb -- --all   → one file per Remnawave 3.x minor version (3.0 … 3.4)
+//   node scripts/build-mcpb.mjs --print-targets → JSON list of panel versions (for Docker images)
 //
 // The code is the same in every file: tools are generated from @remnawave/backend-contract at startup,
 // so each file just carries the contract of its panel version.
@@ -33,6 +34,12 @@ function targets(all) {
     }
     byMinor.set(minorOf(stable), stable);
     return [...byMinor.entries()];
+}
+
+// used by the release workflow to build one Docker image per panel version
+if (process.argv.includes('--print-targets')) {
+    process.stdout.write(JSON.stringify(targets(true).map(([minor, contract]) => ({ minor, contract, latest: contract === stable }))));
+    process.exit(0);
 }
 
 if (!existsSync('dist/index.js')) run('npm run build');

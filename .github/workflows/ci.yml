@@ -26,3 +26,19 @@ jobs:
           name: remnawave-mcp-mcpb
           path: build/*.mcpb
           retention-days: 7
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Собрать образ
+        run: docker build -t remnawave-mcp:ci .
+      - name: Образ запускается, строит команды из контракта и работает не от root
+        run: |
+          docker run --rm remnawave-mcp:ci --version
+          docker run --rm remnawave-mcp:ci --list-tools | tail -1
+          test "$(docker run --rm --entrypoint id remnawave-mcp:ci -u)" != "0"
+      - name: Образ под старую версию панели
+        run: |
+          docker build --build-arg CONTRACT_VERSION=3.3.3 -t remnawave-mcp:ci-33 .
+          docker run --rm remnawave-mcp:ci-33 --version | grep "contract 3.3.3"

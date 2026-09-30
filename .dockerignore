@@ -1,0 +1,13 @@
+node_modules
+dist
+build
+test
+.git
+.github
+examples
+*.mcpb
+*.md
+!README.md
+icon.png
+manifest.json
+scripts

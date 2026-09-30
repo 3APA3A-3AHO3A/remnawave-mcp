@@ -43,6 +43,20 @@ export function loadConfig(): Config {
         'Content-Type': 'application/json',
     };
     if (process.env.REMNAWAVE_API_KEY) headers['X-Api-Key'] = process.env.REMNAWAVE_API_KEY;
+    // Direct connection to the panel container (http://remnawave:3000 inside the Docker network):
+    // the panel expects the headers a reverse proxy would normally add.
+    if (/^http:\/\//i.test(baseUrl)) {
+        headers['X-Forwarded-Proto'] = 'https';
+        headers['X-Forwarded-For'] = '127.0.0.1';
+    }
+    // Any extra headers, JSON: {"Header-Name": "value"}
+    if (process.env.REMNAWAVE_HEADERS) {
+        try {
+            Object.assign(headers, JSON.parse(process.env.REMNAWAVE_HEADERS));
+        } catch {
+            throw new Error('REMNAWAVE_HEADERS must be JSON, e.g. {"X-Custom": "value"}');
+        }
+    }
     if (process.env.CF_ACCESS_CLIENT_ID) headers['CF-Access-Client-Id'] = process.env.CF_ACCESS_CLIENT_ID;
     if (process.env.CF_ACCESS_CLIENT_SECRET)
         headers['CF-Access-Client-Secret'] = process.env.CF_ACCESS_CLIENT_SECRET;
