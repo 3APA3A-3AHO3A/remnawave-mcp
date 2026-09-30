@@ -224,7 +224,7 @@ npm run pack:mcpb -- --all  # под все версии 3.x → build\remnawave
 ```
 
 - **CI** на каждый push: сборка, тесты, `npm audit`, сборка расширения (файл доступен в Actions → запуск → Artifacts).
-- **Релиз:** поднять версию в `package.json`, добавить раздел в `CHANGELOG.md`, затем `git tag v1.2.0` и `git push origin v1.2.0` — GitHub сам соберёт и опубликует релиз с файлами `.mcpb` под все версии 3.x.
+- **Релиз:** поднять версию в `package.json`, добавить раздел в `CHANGELOG.md`, затем на сайте **Releases → Draft a new release** (тег `vX.Y.Z`) или из консоли `git tag vX.Y.Z` + `git push origin vX.Y.Z`. GitHub сам соберёт, прогонит тесты и приложит файлы `.mcpb` под все версии 3.x; пустой текст релиза заполнится из CHANGELOG.
 - **Новая версия панели:** раз в сутки workflow сверяет стабильный релиз Remnawave и открывает PR с обновлённым контрактом.
 
 ## Приватность

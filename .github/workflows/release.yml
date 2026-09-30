@@ -1,18 +1,34 @@
-# Релиз: git tag v1.2.0 && git push origin v1.2.0
-# → сборка, тесты, расширение .mcpb → GitHub Release с описанием из CHANGELOG.md.
+# Два способа выпустить релиз — оба работают:
+#  1) на сайте: Releases → Draft a new release → тег vX.Y.Z → текст → Publish;
+#  2) из консоли: git tag vX.Y.Z && git push origin vX.Y.Z (текст возьмётся из CHANGELOG.md).
+# В обоих случаях workflow собирает проект, прогоняет тесты и прикладывает к релизу
+# файлы расширения под каждую версию панели 3.x. Написанный на сайте текст не трогается;
+# если текст пустой — подставляется раздел из CHANGELOG.md и инструкция по установке.
 name: Release
 on:
   push:
     tags: ["v*"]
+  release:
+    types: [published]
 
 permissions:
   contents: write
 
+# релиз с сайта создаёт и тег, и релиз — два запуска идут по очереди, второй просто обновит файлы
+concurrency:
+  group: release-${{ github.event.release.tag_name || github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.release.tag_name || github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name || github.ref }}
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -23,17 +39,15 @@ jobs:
 
       - name: Версия тега = версия в package.json
         run: |
-          TAG="${GITHUB_REF_NAME#v}"
           PKG=$(node -p "require('./package.json').version")
-          if [ "$TAG" != "$PKG" ]; then echo "Тег v$TAG, а в package.json $PKG — поправьте версию"; exit 1; fi
+          if [ "${TAG#v}" != "$PKG" ]; then echo "Тег $TAG, а в package.json $PKG — поправьте версию"; exit 1; fi
 
       # по файлу на каждую версию панели 3.x: remnawave-3.0.mcpb … remnawave-3.4.mcpb
       - run: npm run pack:mcpb -- --all
 
-      - name: Описание из CHANGELOG
+      - name: Текст из CHANGELOG
         run: |
-          V="${GITHUB_REF_NAME#v}"
-          awk -v v="$V" '$0 ~ "^## "v" " {f=1; next} /^## / && f {exit} f' CHANGELOG.md > notes.md
+          awk -v v="${TAG#v}" '$0 ~ "^## "v" " {f=1; next} /^## / && f {exit} f' CHANGELOG.md > notes.md
           cat >> notes.md <<'TXT'
 
           ---
@@ -41,7 +55,12 @@ jobs:
           **Install in Claude Desktop:** download the file for your panel version (shown at the bottom of the Remnawave panel): `remnawave-3.4.mcpb` for 3.4.x, `remnawave-3.3.mcpb` for 3.3.x, etc. → double-click it (or drag it into Claude → Settings → Extensions) → enter the panel URL and an API token (read scopes only).
           TXT
 
-      - name: GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" build/*.mcpb --title "$GITHUB_REF_NAME" --notes-file notes.md
+      - name: Создать релиз или приложить файлы к существующему
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" build/*.mcpb --clobber
+            BODY=$(gh release view "$TAG" --json body --jq .body)
+            if [ -z "$(echo "$BODY" | tr -d '[:space:]')" ]; then gh release edit "$TAG" --notes-file notes.md; fi
+          else
+            gh release create "$TAG" build/*.mcpb --title "$TAG" --notes-file notes.md
+          fi

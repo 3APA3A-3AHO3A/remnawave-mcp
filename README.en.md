@@ -214,7 +214,7 @@ npm run pack:mcpb -- --all  # for every 3.x version → build/remnawave-3.0.mcpb
 ```
 
 - **CI** on every push: build, tests, `npm audit`, extension build (downloadable from Actions → run → Artifacts).
-- **Release:** bump the version in `package.json`, add a `CHANGELOG.md` section, then `git tag v1.2.0` and `git push origin v1.2.0` — GitHub builds and publishes the release with `.mcpb` files for every 3.x version.
+- **Release:** bump the version in `package.json`, add a `CHANGELOG.md` section, then either **Releases → Draft a new release** on GitHub (tag `vX.Y.Z`) or `git tag vX.Y.Z` + `git push origin vX.Y.Z`. GitHub builds, runs the tests and attaches `.mcpb` files for every 3.x version; an empty release text is filled from CHANGELOG.
 - **New panel version:** a daily workflow checks the latest stable Remnawave release and opens a PR with the updated contract.
 
 ## Privacy
