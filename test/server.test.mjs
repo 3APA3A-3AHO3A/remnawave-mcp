@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { createRequire } from 'node:module';
 import { createServer } from '../dist/server.js';
 import { buildRegistry } from '../dist/registry.js';
 import { availableExtras } from '../dist/extras.js';
@@ -16,10 +17,11 @@ function cfg(over = {}) {
     };
 }
 
-function mockClient(log) {
+function mockClient(log, panelVersion = '3.4.4') {
     return {
         async request(method, path, query, body) {
             log.push({ method, path, query, body });
+            if (path === '/api/system/metadata') return { version: panelVersion };
             if (path === '/api/users/stream') return { users: [user()], nextCursor: null, hasMore: false };
             if (path.startsWith('/api/users/by-username/')) {
                 if (decodeURIComponent(path.split('/').pop()) !== PII.username) throw new Error(`User ${decodeURIComponent(path.split('/').pop())} not found`);
@@ -43,10 +45,12 @@ function mockClient(log) {
     };
 }
 
-async function connect(over) {
+const CONTRACT = createRequire(import.meta.url)('@remnawave/backend-contract/package.json').version;
+
+async function connect(over, panelVersion = CONTRACT) {
     const log = [];
     const { server } = createServer({
-        cfg: cfg(over), tools: buildRegistry(), extras: availableExtras(), serverVersion: 't', contractVersion: 't', client: mockClient(log),
+        cfg: cfg(over), tools: buildRegistry(), extras: availableExtras(), serverVersion: 't', contractVersion: CONTRACT, client: mockClient(log, panelVersion),
     });
     const [a, b] = InMemoryTransport.createLinkedPair();
     const client = new Client({ name: 'test', version: '1' });
@@ -111,7 +115,7 @@ test('pseudonym round trip: tool argument is resolved locally', async () => {
     assert.match(pseudo, /^user~/);
     const r = await call('get_user_by_username', { username: pseudo });
     assert.ok(!r.isError, r.text);
-    assert.equal(log.at(-1).path, `/api/users/by-username/${PII.username}`);
+    assert.ok(log.some((l) => l.path === `/api/users/by-username/${PII.username}`));
 });
 
 test('error messages are scrubbed', async () => {
@@ -127,11 +131,13 @@ test('error messages are scrubbed', async () => {
 test('page size is capped before reaching the panel', async () => {
     const { call, log } = await connect();
     await call('get_users', { size: 1000 });
-    assert.equal(log.at(-1).query.size, 200);
+    assert.equal(log.find((l) => l.path === '/api/users/').query.size, 200);
 });
 
-test('geocheck: cooldown returns cached result, node IPs are not pseudonymized, image dropped', async () => {
-    const { call, log } = await connect();
+test('geocheck: cooldown returns cached result, node IPs are not pseudonymized, image dropped', async (t) => {
+    const { client, call, log } = await connect();
+    if (!(await client.listTools()).tools.some((x) => x.name === 'geocheck_node'))
+        return t.skip('GeoCheck is not in this contract version (added in Remnawave 3.4)');
     const first = JSON.parse((await call('geocheck_node', { nodeUuid: 'n1' })).text);
     assert.equal(first.result.image, '[svg omitted]');
     assert.equal(first.result.rawReport.ip, '5.6.7.8');
@@ -145,6 +151,7 @@ test('panel_overview marks offline nodes', async () => {
     const { call } = await connect();
     const o = JSON.parse((await call('panel_overview', {})).text);
     assert.deepEqual(o.offlineNodes, ['NL-1']);
+    assert.equal(o.versions.panel, CONTRACT);
     assert.equal(o.nodes[0].trafficUsedGb, 1);
 });
 
@@ -154,4 +161,23 @@ test('prompts are listed and rendered', async () => {
     assert.ok(prompts.some((p) => p.name === 'daily_summary'));
     const p = await client.getPrompt({ name: 'client_review', arguments: { user: '5' } });
     assert.match(p.messages[0].content.text, /user_report/);
+});
+
+test('same panel version: no warning', async () => {
+    const { call } = await connect();
+    const { text } = await call('panel_overview', {});
+    assert.ok(!text.includes('Version mismatch'));
+});
+
+test('older panel: warning points to the right build', async () => {
+    const { call } = await connect(undefined, '3.2.3');
+    const { text } = await call('get_nodes', {});
+    assert.match(text, /^⚠ Version mismatch: the panel is 3\.2\.3/);
+    assert.match(text, /remnawave-3\.2\.mcpb/);
+});
+
+test('newer panel: warning suggests updating', async () => {
+    const { call } = await connect(undefined, '9.1.0');
+    const { text } = await call('get_nodes', {});
+    assert.match(text, /Update remnawave-mcp/);
 });

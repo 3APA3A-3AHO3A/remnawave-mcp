@@ -13,6 +13,7 @@ import { Privacy } from './redact.js';
 import { render } from './format.js';
 import { Cooldown, capPageSize } from './limits.js';
 import { prompts } from './prompts.js';
+import { VersionCheck } from './version.js';
 
 export function selectTools(all: ApiTool[], cfg: Config) {
     return all.filter(
@@ -101,6 +102,7 @@ export function createServer(opts: {
     const cooldowns = { geocheck: new Cooldown(cfg.cooldown.geocheck), connections: new Cooldown(cfg.cooldown.connections) };
     const tools = selectTools(opts.tools, cfg);
     const extras = opts.extras.filter((e) => !cfg.exclude.has(e.name) && (!cfg.include || cfg.include.has(e.name)));
+    const versions = new VersionCheck(client, opts.contractVersion, opts.serverVersion);
     const byName = new Map(tools.map((t) => [t.name, t]));
     const extraByName = new Map(extras.map((e) => [e.name, e]));
 
@@ -145,12 +147,18 @@ export function createServer(opts: {
                 if (!t) throw new Error(`Unknown tool: ${name}`);
                 data = await callApi(client, t, args);
             }
-            const text = render(filter.apply(data), { max: cfg.maxResponseChars, compact: cfg.compact });
+            const v = await versions.get();
+            if (name === 'panel_overview' && data && typeof data === 'object')
+                data = { versions: { panel: v.panel, mcpContract: v.contract, mcpServer: v.server }, ...(data as object) };
+            let text = render(filter.apply(data), { max: cfg.maxResponseChars, compact: cfg.compact });
+            if (v.warning) text = `${v.warning}\n${text}`;
             return { content: [{ type: 'text', text }] };
         } catch (e) {
             // error texts may quote user data — they go through the privacy filter too
             const msg = e instanceof Error ? e.message : String(e);
-            return { isError: true, content: [{ type: 'text', text: privacy.text(msg) }] };
+            const v = await versions.get().catch(() => undefined);
+            const text = (v?.warning ? `${v.warning}\n` : '') + privacy.text(msg);
+            return { isError: true, content: [{ type: 'text', text }] };
         }
     });
 

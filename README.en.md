@@ -20,11 +20,11 @@ MCP server for the [Remnawave](https://github.com/remnawave) **3.x** panel. It l
 | Panel version | Status |
 |---|---|
 | **3.4.x** | ✅ tested on production panels (3.4.4) |
-| other **3.x** | ✅ should work: install the contract for your version — `npm i @remnawave/backend-contract@<version> --save-exact` and `npm run build` |
+| **3.0 – 3.3** | ✅ a separate extension file per version; for a manual install — `npm i @remnawave/backend-contract@<version> --save-exact`. Tools your version doesn't have yet (e.g. GeoCheck, added in 3.4) are simply not shown |
 | **2.8.x** | ⚠️ not officially supported: core tools build, but not tested against a live panel; some extra tools are unavailable |
 | **2.7 and older** | ❌ use [TrackLine/mcp-remnawave](https://github.com/TrackLine/mcp-remnawave) |
 
-The contract version should match your panel version (at least the first two numbers). The server adapts to the installed contract: routes, parameters and the tool list all come from it.
+The contract version should match your panel version at least in the first two numbers. The server adapts to the installed contract (routes, parameters and the tool list come from it) and checks the panel version on connect: if it differs, you get a warning in the chat telling you which file to download.
 
 ---
 
@@ -32,12 +32,23 @@ The contract version should match your panel version (at least the first two num
 
 ### Option 1 — Claude Desktop extension (easiest)
 
-1. Open the [latest release](https://github.com/3APA3A-3AHO3A/remnawave-mcp/releases/latest) and download `remnawave-mcp-<version>.mcpb`.
+1. Check your panel version — it is shown at the bottom of the Remnawave panel (e.g. `3.4.4`).
+   Open the [latest release](https://github.com/3APA3A-3AHO3A/remnawave-mcp/releases/latest) and download the matching file:
+
+   | Panel | File |
+   |---|---|
+   | 3.4.x | `remnawave-3.4.mcpb` |
+   | 3.3.x | `remnawave-3.3.mcpb` |
+   | 3.2.x | `remnawave-3.2.mcpb` |
+   | 3.1.x | `remnawave-3.1.mcpb` |
+   | 3.0.x | `remnawave-3.0.mcpb` |
+
+   Picked the wrong one? The server compares versions and tells you in the chat which file you need.
 2. Double-click the file (or drag it into **Claude → Settings → Extensions**).
 3. Click **Install** and fill in the **panel URL** and **API token** ([how to create one](#api-token)). Other fields can stay empty.
 4. Done — ask in the chat: "Give me a panel summary".
 
-Only Claude Desktop is needed — it ships its own Node.js. The token is stored in the Windows/macOS keychain, not as plain text. To update, download the new `.mcpb` and open it the same way.
+Only Claude Desktop is needed — it ships its own Node.js. The token is stored in the Windows/macOS keychain, not as plain text. To update (new remnawave-mcp release or new panel version), download the matching `.mcpb` and open it the same way.
 
 > An extension connects **one** panel. For several panels or for Cursor / Windsurf use option 2.
 
@@ -189,6 +200,7 @@ src/
   redact.ts    — privacy filter: secrets and pseudonyms
   format.ts    — compact output and shortening of long lists
   limits.ts    — GeoCheck repeat limits and list size cap
+  version.ts   — panel version vs. build version check
   client.ts    — HTTP requests to the panel
   config.ts    — environment variables
 ```
@@ -196,12 +208,13 @@ src/
 ## For developers
 
 ```bash
-npm test            # 26 tests: privacy (nothing leaks), reports, limits, tool list
-npm run pack:mcpb   # build the extension → build/remnawave-mcp-<version>.mcpb
+npm test                    # 33 tests: privacy (nothing leaks), reports, limits, tool list
+npm run pack:mcpb           # extension for the current version → build/remnawave-3.4.mcpb
+npm run pack:mcpb -- --all  # for every 3.x version → build/remnawave-3.0.mcpb … remnawave-3.4.mcpb
 ```
 
 - **CI** on every push: build, tests, `npm audit`, extension build (downloadable from Actions → run → Artifacts).
-- **Release:** bump the version in `package.json`, add a `CHANGELOG.md` section, then `git tag v1.2.0` and `git push origin v1.2.0` — GitHub builds and publishes the release with the `.mcpb`.
+- **Release:** bump the version in `package.json`, add a `CHANGELOG.md` section, then `git tag v1.2.0` and `git push origin v1.2.0` — GitHub builds and publishes the release with `.mcpb` files for every 3.x version.
 - **New panel version:** a daily workflow checks the latest stable Remnawave release and opens a PR with the updated contract.
 
 ## Privacy

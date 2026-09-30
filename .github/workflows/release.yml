@@ -27,7 +27,8 @@ jobs:
           PKG=$(node -p "require('./package.json').version")
           if [ "$TAG" != "$PKG" ]; then echo "Тег v$TAG, а в package.json $PKG — поправьте версию"; exit 1; fi
 
-      - run: npm run pack:mcpb
+      # по файлу на каждую версию панели 3.x: remnawave-3.0.mcpb … remnawave-3.4.mcpb
+      - run: npm run pack:mcpb -- --all
 
       - name: Описание из CHANGELOG
         run: |
@@ -36,8 +37,8 @@ jobs:
           cat >> notes.md <<'TXT'
 
           ---
-          **Установка в Claude Desktop:** скачайте `.mcpb` ниже → откройте его двойным щелчком (или Claude → Настройки → Расширения → перетащите файл) → укажите адрес панели и API-токен (только права `read`).
-          **Install in Claude Desktop:** download the `.mcpb` below → double-click it (or drag it into Claude → Settings → Extensions) → enter the panel URL and an API token (read scopes only).
+          **Установка в Claude Desktop:** скачайте файл под версию своей панели (версия видна внизу панели Remnawave): `remnawave-3.4.mcpb` для 3.4.x, `remnawave-3.3.mcpb` для 3.3.x и т.д. → откройте двойным щелчком (или Claude → Настройки → Расширения → перетащите файл) → укажите адрес панели и API-токен (только права `read`).
+          **Install in Claude Desktop:** download the file for your panel version (shown at the bottom of the Remnawave panel): `remnawave-3.4.mcpb` for 3.4.x, `remnawave-3.3.mcpb` for 3.3.x, etc. → double-click it (or drag it into Claude → Settings → Extensions) → enter the panel URL and an API token (read scopes only).
           TXT
 
       - name: GitHub Release
