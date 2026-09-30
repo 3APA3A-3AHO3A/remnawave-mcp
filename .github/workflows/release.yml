@@ -110,7 +110,7 @@ jobs:
           TAGS="$IMAGE:$M,$IMAGE:$M-$V"
           if [ "${{ matrix.target.latest }}" = "true" ]; then TAGS="$TAGS,$IMAGE:latest,$IMAGE:$V"; fi
           echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/amd64,linux/arm64
