@@ -23,6 +23,13 @@ export type PrivacyMode = 'strict' | 'basic' | 'off';
 
 const MASK = '[hidden]';
 const SECRET_KEY_RE = /(private_?key|secret|passw(or)?d|api_?key|^token$|^vlessUuid$)/i;
+/** Reality short IDs are part of the handshake auth — hide them as well */
+const SECRET_LIST_KEYS = new Set(['shortIds']);
+/** IPv4 / IPv6, optionally with a CIDR mask; values like "geoip:private" in Xray rules are left alone */
+const IP_RE = /^(\d{1,3}(\.\d{1,3}){3}|[0-9a-f]{0,4}(:[0-9a-f]{0,4}){2,7})(\/\d{1,3})?$/i;
+const IP_FIELDS = new Set(['ip', 'ips', 'requestIp', 'ipAddresses']);
+/** long device identifiers inside user agents, e.g. Happ/4.4.1/Android/17891107313301967618 */
+const UA_ID_RE = /\b[0-9a-f]{12,}\b/gi;
 const LINK_ARRAYS = new Set(['links', 'ssConfLinks']);
 const LINK_RE = /\b(vless|vmess|trojan|ss|ssr|hysteria2?|hy2|tuic|wireguard|wg):\/\/\S+/gi;
 
@@ -62,6 +69,14 @@ export class Privacy {
         return token;
     }
 
+    /** Pseudonymize only real IP addresses (Xray rules use the same "ip" key for geoip:… lists). */
+    private pseudoIp(value: unknown): unknown {
+        if (typeof value === 'string') return IP_RE.test(value) ? this.pseudo('ip', value) : value;
+        if (Array.isArray(value)) return value.map((v) => this.pseudoIp(v));
+        if (value && typeof value === 'object') return this.apply(value);
+        return value;
+    }
+
     /** Filter an API response before it goes to the chat. */
     apply(value: unknown, key = '', inUser = false): unknown {
         if (this.mode === 'off' || value === null || value === undefined) return value;
@@ -70,13 +85,19 @@ export class Privacy {
         if (key && SECRET_KEY_RE.test(key) && (typeof value === 'string' || typeof value === 'number')) {
             return value === '' ? value : MASK;
         }
+        if (key && SECRET_LIST_KEYS.has(key) && Array.isArray(value)) {
+            return value.map((v) => (v === '' ? v : MASK));
+        }
         if (key && LINK_ARRAYS.has(key) && typeof value === 'object') {
             return Array.isArray(value) ? `${MASK} (${value.length} links)` : MASK;
         }
         // subscription short UUID / URL give access to the client's config → a credential
         if (key && inUser && USER_ONLY_HIDE.has(key) && typeof value === 'string') return value === '' ? value : MASK;
         if (strict && key) {
+            if (IP_FIELDS.has(key)) return this.pseudoIp(value);
             if (key in PII_FIELDS) return this.pseudo(PII_FIELDS[key], value);
+            if (key === 'userAgent' && typeof value === 'string')
+                return value.replace(UA_ID_RE, (m) => String(this.pseudo('hwid', m)));
             if (inUser && key in USER_ONLY_PSEUDO && typeof value === 'string')
                 return this.pseudo(USER_ONLY_PSEUDO[key], value);
         }
