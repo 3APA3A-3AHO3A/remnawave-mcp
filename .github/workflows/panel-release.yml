@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -48,6 +48,7 @@ jobs:
           npm i "@remnawave/backend-contract@$V" "zod@$ZOD" --save-exact
           npm run build
           npm run list-tools:all | tail -1
+          npm test
 
       - name: Открыть Pull Request
         if: steps.v.outputs.update == 'true'
@@ -60,5 +61,5 @@ jobs:
           git checkout -b "panel-$V"
           git commit -am "Контракт Remnawave $V (стабильный релиз панели)"
           git push -u origin "panel-$V"
-          gh pr create --title "Remnawave $V: обновить контракт" --body "Вышел стабильный релиз панели **v$V**. Контракт и zod обновлены, сборка прошла. Смержите, когда обновите свои панели до $V." --label dependencies || \
-          gh pr create --title "Remnawave $V: обновить контракт" --body "Вышел стабильный релиз панели **v$V**. Контракт и zod обновлены, сборка прошла. Смержите, когда обновите свои панели до $V."
+          gh pr create --title "Remnawave $V: обновить контракт" --body "Вышел стабильный релиз панели **v$V**. Контракт и zod обновлены, сборка и тесты (в т.ч. приватности) прошли. Смержите, когда обновите свои панели до $V." --label dependencies || \
+          gh pr create --title "Remnawave $V: обновить контракт" --body "Вышел стабильный релиз панели **v$V**. Контракт и zod обновлены, сборка и тесты (в т.ч. приватности) прошли. Смержите, когда обновите свои панели до $V."

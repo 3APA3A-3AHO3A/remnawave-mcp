@@ -11,7 +11,18 @@ export interface Config {
     exclude: Set<string>;
     include: Set<string> | null;
     maxResponseChars: number;
+    /** compact JSON without nulls/duplicates (default true) */
+    compact: boolean;
+    /** max `size` for list requests (0 = no cap) */
+    maxPageSize: number;
+    /** minutes between repeated node jobs for the same target */
+    cooldown: { geocheck: number; connections: number };
     timeoutMs: number;
+}
+
+function num(v: string | undefined, def: number): number {
+    const n = Number(v);
+    return v && Number.isFinite(n) && n >= 0 ? n : def;
 }
 
 function csv(v: string | undefined): string[] {
@@ -37,8 +48,9 @@ export function loadConfig(): Config {
         headers['CF-Access-Client-Secret'] = process.env.CF_ACCESS_CLIENT_SECRET;
 
     // Safe by default: write tools appear only with REMNAWAVE_READONLY=false.
-    const readonly = (process.env.REMNAWAVE_READONLY ?? 'true').toLowerCase() !== 'false';
-    let privacy = (process.env.REMNAWAVE_PRIVACY ?? 'strict').toLowerCase();
+    const readonly = (process.env.REMNAWAVE_READONLY || 'true').toLowerCase() !== 'false';
+    // `||` instead of `??`: Claude extensions pass empty strings for fields left blank.
+    let privacy = (process.env.REMNAWAVE_PRIVACY || 'strict').toLowerCase();
     if ((process.env.REMNAWAVE_SHOW_SECRETS ?? '').toLowerCase() === 'true') privacy = 'off';
     if (!['strict', 'basic', 'off'].includes(privacy))
         throw new Error('REMNAWAVE_PRIVACY must be strict, basic or off');
@@ -55,7 +67,13 @@ export function loadConfig(): Config {
         showSecrets,
         exclude: new Set(csv(process.env.REMNAWAVE_TOOLS_EXCLUDE)),
         include: include.length ? new Set(include) : null,
-        maxResponseChars: Number(process.env.REMNAWAVE_MAX_RESPONSE_CHARS ?? 60000),
-        timeoutMs: Number(process.env.REMNAWAVE_TIMEOUT_MS ?? 30000),
+        maxResponseChars: num(process.env.REMNAWAVE_MAX_RESPONSE_CHARS, 60000),
+        compact: (process.env.REMNAWAVE_COMPACT || 'true').toLowerCase() !== 'false',
+        maxPageSize: num(process.env.REMNAWAVE_MAX_PAGE_SIZE, 200),
+        cooldown: {
+            geocheck: num(process.env.REMNAWAVE_GEOCHECK_COOLDOWN_MIN, 30),
+            connections: num(process.env.REMNAWAVE_CONNECTIONS_COOLDOWN_MIN, 2),
+        },
+        timeoutMs: num(process.env.REMNAWAVE_TIMEOUT_MS, 30000),
     };
 }

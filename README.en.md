@@ -10,7 +10,10 @@ MCP server for the [Remnawave](https://github.com/remnawave) **3.x** panel. It l
 - **Always matches your panel version.** Tools are not hand-written: they are generated at startup from the official [`@remnawave/backend-contract`](https://www.npmjs.com/package/@remnawave/backend-contract) package. Panel updated → bump the package → rebuild.
 - **Secrets are never exposed:** panel login, passkeys, node SECRET_KEY, API tokens.
 - **A leaked chat leaks neither keys nor clients.** Reality private keys, passwords, UUIDs and connection links are hidden; client personal data (username, email, Telegram ID, IP, HWID) is replaced with pseudonyms. See [Privacy](#privacy).
-- **Convenience tools on top:** `find_user` (by Telegram ID, email, username, shortUuid, ID, tag), `geocheck_node`, `node_connections`, `user_connections` — they start the job on the node and wait for the result.
+- **Ready-made reports in one call:** `panel_overview` (panel summary), `user_report` (everything about a client), `sharing_suspects` (who shares a subscription), plus `find_user`, `geocheck_node`, `node_connections`, `user_connections`.
+- **Prompt templates** in the Claude menu: "Panel summary", "Client review", "Sharing audit", "Node check".
+- **Gentle on nodes and limits:** a repeated GeoCheck of the same node within 30 minutes returns the previous result; responses are compacted (2–3× fewer tokens).
+- **One-click install** — a `.mcpb` extension for Claude Desktop; the token is kept in the system keychain.
 
 ## Compatibility
 
@@ -26,6 +29,19 @@ The contract version should match your panel version (at least the first two num
 ---
 
 ## Installation
+
+### Option 1 — Claude Desktop extension (easiest)
+
+1. Open the [latest release](https://github.com/3APA3A-3AHO3A/remnawave-mcp/releases/latest) and download `remnawave-mcp-<version>.mcpb`.
+2. Double-click the file (or drag it into **Claude → Settings → Extensions**).
+3. Click **Install** and fill in the **panel URL** and **API token** ([how to create one](#api-token)). Other fields can stay empty.
+4. Done — ask in the chat: "Give me a panel summary".
+
+Only Claude Desktop is needed — it ships its own Node.js. The token is stored in the Windows/macOS keychain, not as plain text. To update, download the new `.mcpb` and open it the same way.
+
+> An extension connects **one** panel. For several panels or for Cursor / Windsurf use option 2.
+
+### Option 2 — manual (several panels, other MCP clients)
 
 Requires [Node.js](https://nodejs.org) 22+ and Git.
 
@@ -47,7 +63,7 @@ npm run build
 npm run list-tools
 ```
 
-The last line should look like `79 API tools + 4 extra (contract 3.4.4)`.
+The last line should look like `79 API tools + 7 extra (contract 3.4.4)`. Then [connect it to Claude Desktop](#claude-desktop).
 
 macOS / Linux: same commands, any path.
 
@@ -62,6 +78,9 @@ Do not grant `write`, `*`, api-tokens, passkeys, auth or keygen.
 > Remnawave scopes are "read/write", not GET/POST. GeoCheck, connection requests and user lookup work with `read` even though they are POST requests.
 
 ## Claude Desktop
+
+_Option 2 only._
+
 
 **Claude → Settings → Developer → Edit Config.** Fully quit Claude (tray → Quit), then add this right after the first `{` in `claude_desktop_config.json`:
 
@@ -99,11 +118,22 @@ Full example: [`examples/claude_desktop_config.example.json`](examples/claude_de
 | `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET` | no | Panel behind Cloudflare Access |
 | `REMNAWAVE_TOOLS_EXCLUDE` | no | Hide tools (comma-separated) |
 | `REMNAWAVE_TOOLS_INCLUDE` | no | Expose only these tools |
-| `REMNAWAVE_MAX_RESPONSE_CHARS` | no | Truncate long responses, default 60000 |
+| `REMNAWAVE_MAX_RESPONSE_CHARS` | no | Max response length, default 60000. Long lists are shortened with a "shown N of M" note |
+| `REMNAWAVE_COMPACT` | no | `true` by default — compact responses without empty fields and duplicates. `false` — as returned by the panel |
+| `REMNAWAVE_MAX_PAGE_SIZE` | no | Cap for list page size per request, default 200 (0 — no cap) |
+| `REMNAWAVE_GEOCHECK_COOLDOWN_MIN` | no | At most one GeoCheck per node every N minutes, default 30 (0 — no limit) |
+| `REMNAWAVE_CONNECTIONS_COOLDOWN_MIN` | no | Same for connection lists, default 2 |
 | `REMNAWAVE_TIMEOUT_MS` | no | Request timeout, default 30000 |
 
 ## What to ask
 
+The **+** menu in the Claude chat has ready templates: **Panel summary**, **Client review**, **Sharing audit**, **Node check**.
+
+Or just ask:
+
+- "How is the panel doing?" — online users, offline nodes, traffic, expiring subscriptions
+- "Review client 1234" — subscription, devices, traffic per day and node, recent requests
+- "Who seems to share their subscription?"
 - "How many active and online users?"
 - "Find the client with Telegram ID 123456789, show devices and expiry date"
 - "Which nodes are offline?" / "Traffic per node for last week"
@@ -111,7 +141,7 @@ Full example: [`examples/claude_desktop_config.example.json`](examples/claude_de
 - "Who is on node DE-1 right now and from how many IPs?"
 - "Top users by device count" / "Torrent report for the last day"
 
-GeoCheck and connection requests put a small load on the node — don't overuse them on nodes with a traffic cap.
+GeoCheck and connection lists run on the node and cost its traffic, so a repeated request for the same node within 30 minutes (connections: 2 minutes) returns the previous result with a note instead of loading the node again.
 
 ## Troubleshooting
 
@@ -153,11 +183,26 @@ In `@remnawave/backend-contract` every API endpoint is described as a "command":
 src/
   index.ts     — MCP server, tool selection, calls
   registry.ts  — tools generated from the contract, block lists
-  extras.ts    — convenience tools (find_user, geocheck_node, …)
+  server.ts    — MCP server: tool list, calls, prompts
+  extras.ts    — reports and convenience tools (panel_overview, user_report, …)
+  prompts.ts   — prompt templates for the Claude menu
   redact.ts    — privacy filter: secrets and pseudonyms
+  format.ts    — compact output and shortening of long lists
+  limits.ts    — GeoCheck repeat limits and list size cap
   client.ts    — HTTP requests to the panel
   config.ts    — environment variables
 ```
+
+## For developers
+
+```bash
+npm test            # 26 tests: privacy (nothing leaks), reports, limits, tool list
+npm run pack:mcpb   # build the extension → build/remnawave-mcp-<version>.mcpb
+```
+
+- **CI** on every push: build, tests, `npm audit`, extension build (downloadable from Actions → run → Artifacts).
+- **Release:** bump the version in `package.json`, add a `CHANGELOG.md` section, then `git tag v1.2.0` and `git push origin v1.2.0` — GitHub builds and publishes the release with the `.mcpb`.
+- **New panel version:** a daily workflow checks the latest stable Remnawave release and opens a PR with the updated contract.
 
 ## Privacy
 
@@ -165,7 +210,7 @@ Everything the server returns ends up in the chat history, so panel responses ar
 
 | Data | `strict` (default) | `basic` | `off` |
 |---|---|---|---|
-| Reality private keys & shortIds, SECRET_KEY, passwords, API keys | hidden | hidden | visible |
+| Reality private keys & shortIds, SECRET_KEY, passwords, API keys, error texts | hidden | hidden | visible |
 | VLESS UUID, `vless://`, `ss://`… links, subscription shortUuid & URL | hidden | hidden | visible |
 | "Connection keys" and "raw subscription" tools | unavailable | unavailable | available |
 | username, email, Telegram ID, client notes | pseudonym | visible | visible |
@@ -179,7 +224,8 @@ Need the real data? Open the client in the panel by their ID.
 **Limits:** whatever you type into the chat yourself (e.g. "find Telegram ID 123…") stays in the chat. Prefer panel user IDs or pseudonyms.
 
 Also:
-- The token lives only in your MCP client config and never gets into the repository.
+- With the extension the token is kept in the system keychain; with a manual install — only in your MCP client config, never in the repository.
+- Every change is checked by automated tests: if anything starts letting keys or client data through, CI turns red.
 - Use a dedicated read-only token so it can be revoked without touching bots or monitoring.
 
 ## Credits

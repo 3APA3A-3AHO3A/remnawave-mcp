@@ -17,3 +17,7 @@ Thumbs.db
 
 # временные файлы проверок
 *.tmp.mjs
+
+# сборка расширения Claude
+build/
+*.mcpb

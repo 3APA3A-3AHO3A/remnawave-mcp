@@ -1,0 +1,46 @@
+# Релиз: git tag v1.2.0 && git push origin v1.2.0
+# → сборка, тесты, расширение .mcpb → GitHub Release с описанием из CHANGELOG.md.
+name: Release
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+
+      - name: Версия тега = версия в package.json
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG=$(node -p "require('./package.json').version")
+          if [ "$TAG" != "$PKG" ]; then echo "Тег v$TAG, а в package.json $PKG — поправьте версию"; exit 1; fi
+
+      - run: npm run pack:mcpb
+
+      - name: Описание из CHANGELOG
+        run: |
+          V="${GITHUB_REF_NAME#v}"
+          awk -v v="$V" '$0 ~ "^## "v" " {f=1; next} /^## / && f {exit} f' CHANGELOG.md > notes.md
+          cat >> notes.md <<'TXT'
+
+          ---
+          **Установка в Claude Desktop:** скачайте `.mcpb` ниже → откройте его двойным щелчком (или Claude → Настройки → Расширения → перетащите файл) → укажите адрес панели и API-токен (только права `read`).
+          **Install in Claude Desktop:** download the `.mcpb` below → double-click it (or drag it into Claude → Settings → Extensions) → enter the panel URL and an API token (read scopes only).
+          TXT
+
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" build/*.mcpb --title "$GITHUB_REF_NAME" --notes-file notes.md

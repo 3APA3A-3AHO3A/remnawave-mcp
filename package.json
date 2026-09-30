@@ -1,6 +1,6 @@
 {
   "name": "remnawave-mcp",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "MCP-сервер для панели Remnawave 3.x (Claude Desktop, Cursor и др.). Инструменты генерируются из @remnawave/backend-contract, по умолчанию только чтение.",
   "type": "module",
   "main": "dist/index.js",
@@ -16,7 +16,9 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "list-tools": "node dist/index.js --list-tools",
-    "list-tools:all": "node dist/index.js --list-tools --all"
+    "list-tools:all": "node dist/index.js --list-tools --all",
+    "test": "node --test \"test/*.test.mjs\"",
+    "pack:mcpb": "node scripts/build-mcpb.mjs"
   },
   "keywords": [
     "mcp",

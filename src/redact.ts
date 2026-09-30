@@ -114,6 +114,23 @@ export class Privacy {
         return value;
     }
 
+    /**
+     * Filter free text (error messages from the panel): connection links are masked, and in strict mode
+     * IP addresses, e-mails and any value already known under a pseudonym are replaced as well.
+     */
+    text(value: string): string {
+        if (this.mode === 'off') return value;
+        let out = value.replace(LINK_RE, (_m, p: string) => `${p}://${MASK}`);
+        if (this.mode !== 'strict') return out;
+        out = out.replace(/\b\d{1,3}(\.\d{1,3}){3}\b/g, (m) => String(this.pseudo('ip', m)));
+        out = out.replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, (m) => String(this.pseudo('email', m)));
+        for (const [token, real] of this.reverse) {
+            const r = String(real);
+            if (r.length >= 4 && out.includes(r)) out = out.split(r).join(token);
+        }
+        return out;
+    }
+
     /** Swap pseudonyms in tool arguments back to real values (locally, never through the chat). */
     restore(value: unknown): unknown {
         if (this.mode !== 'strict') return value;
