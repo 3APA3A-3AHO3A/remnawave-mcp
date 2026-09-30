@@ -1,0 +1,45 @@
+{
+  "name": "remnawave-mcp",
+  "version": "1.0.0",
+  "description": "MCP-сервер для панели Remnawave 3.x (Claude Desktop, Cursor и др.). Инструменты генерируются из @remnawave/backend-contract, по умолчанию только чтение.",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "remnawave-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "list-tools": "node dist/index.js --list-tools",
+    "list-tools:all": "node dist/index.js --list-tools --all"
+  },
+  "keywords": [
+    "mcp",
+    "remnawave",
+    "xray",
+    "vpn",
+    "claude"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/3APA3A-3AHO3A/remnawave-mcp.git"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.31.0",
+    "@remnawave/backend-contract": "3.4.4",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "typescript": "5.9"
+  }
+}

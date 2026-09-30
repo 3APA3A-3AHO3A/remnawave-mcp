@@ -1,0 +1,16 @@
+# зависимости и сборка
+node_modules/
+dist/
+
+# секреты — токены никогда не коммитим
+.env
+.env.*
+*.local.json
+claude_desktop_config.json
+
+# мусор
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

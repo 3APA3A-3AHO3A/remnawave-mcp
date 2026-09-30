@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "remnawave": {
+      "command": "node",
+      "args": ["C:\\Tools\\remnawave-mcp\\dist\\index.js"],
+      "env": {
+        "REMNAWAVE_BASE_URL": "https://panel.example.com",
+        "REMNAWAVE_API_TOKEN": "ВАШ_ТОКЕН"
+      }
+    }
+  }
+}
