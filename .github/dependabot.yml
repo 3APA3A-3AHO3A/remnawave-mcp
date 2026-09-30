@@ -1,20 +1,22 @@
-# Бот раз в неделю проверяет новые версии зависимостей и открывает PR.
-# Главное — @remnawave/backend-contract: новая версия = поддержка новой версии панели.
+# Бот каждый день проверяет новые версии зависимостей и открывает PR.
+# Контракт Remnawave и zod он НЕ трогает: их обновляет workflow panel-release.yml —
+# только под стабильный релиз панели, а не под промежуточные сборки.
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: weekly
+      interval: daily
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "@remnawave/backend-contract"
+      - dependency-name: "zod"
     groups:
-      remnawave-contract:
-        patterns: ["@remnawave/backend-contract"]
-      mcp-and-zod:
-        patterns: ["@modelcontextprotocol/sdk", "zod"]
+      mcp-sdk:
+        patterns: ["@modelcontextprotocol/sdk"]
       dev:
         dependency-type: development
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: monthly
+      interval: daily

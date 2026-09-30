@@ -1,0 +1,64 @@
+# Каждый день смотрит последний СТАБИЛЬНЫЙ релиз панели Remnawave (remnawave/panel, «Latest»).
+# Если он новее контракта в package.json — ставит контракт этой версии (и zod той же версии,
+# что внутри контракта), собирает проект и открывает Pull Request.
+name: Panel release check
+on:
+  schedule:
+    - cron: "17 6 * * *"   # каждый день в 06:17 UTC
+  workflow_dispatch:        # кнопка «Run workflow» на вкладке Actions
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Сравнить версии
+        id: v
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PANEL=$(gh api repos/remnawave/panel/releases/latest --jq .tag_name | sed 's/^v//')
+          CURRENT=$(node -p "require('./package.json').dependencies['@remnawave/backend-contract']")
+          echo "Панель (stable): $PANEL, контракт в проекте: $CURRENT"
+          echo "panel=$PANEL" >> "$GITHUB_OUTPUT"
+          if [ "$PANEL" = "$CURRENT" ]; then echo "update=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if ! npm view "@remnawave/backend-contract@$PANEL" version >/dev/null 2>&1; then
+            echo "Контракт $PANEL ещё не опубликован в npm"; echo "update=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if gh pr list --state open --head "panel-$PANEL" --json number --jq 'length' | grep -qv '^0$'; then
+            echo "PR уже открыт"; echo "update=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          echo "update=true" >> "$GITHUB_OUTPUT"
+
+      - name: Обновить контракт и собрать
+        if: steps.v.outputs.update == 'true'
+        run: |
+          V=${{ steps.v.outputs.panel }}
+          ZOD=$(npm view "@remnawave/backend-contract@$V" dependencies.zod)
+          npm ci
+          npm i "@remnawave/backend-contract@$V" "zod@$ZOD" --save-exact
+          npm run build
+          npm run list-tools:all | tail -1
+
+      - name: Открыть Pull Request
+        if: steps.v.outputs.update == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V=${{ steps.v.outputs.panel }}
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "panel-$V"
+          git commit -am "Контракт Remnawave $V (стабильный релиз панели)"
+          git push -u origin "panel-$V"
+          gh pr create --title "Remnawave $V: обновить контракт" --body "Вышел стабильный релиз панели **v$V**. Контракт и zod обновлены, сборка прошла. Смержите, когда обновите свои панели до $V." --label dependencies || \
+          gh pr create --title "Remnawave $V: обновить контракт" --body "Вышел стабильный релиз панели **v$V**. Контракт и zod обновлены, сборка прошла. Смержите, когда обновите свои панели до $V."
