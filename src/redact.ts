@@ -11,7 +11,8 @@ import { createHmac, randomBytes } from 'node:crypto';
  * Credentials (always hidden unless "off"): Reality private keys, node SECRET_KEY, passwords,
  * API keys, user VLESS UUID, subscription links and anything that looks like vless:// ss:// … links.
  *
- * Personal data (strict): username, email, Telegram ID, user description, IP addresses, HWID →
+ * Personal data (strict): username, email, Telegram ID, user description, IP addresses, HWID,
+ * computer names in device models (DESKTOP-…) →
  * stable pseudonyms like "user~3fa2c1", "ip~91b0d4". The same value always gets the same pseudonym
  * while the server runs, so the model can still say "these two users share an IP" without seeing it.
  * Pseudonyms can be passed back as tool arguments — the server swaps them for the real values
@@ -69,6 +70,15 @@ export class Privacy {
         return token;
     }
 
+    /** Replace a computer name in a device model with a pseudonym, keep the architecture suffix. */
+    private pcName(model: string, platform: unknown): string {
+        const looksLikeHost = /^(DESKTOP|LAPTOP|WIN|PC)-[A-Z0-9]+/i.test(model) || /windows|linux/i.test(String(platform ?? ''));
+        if (!looksLikeHost) return model;
+        const m = model.match(/^(.*?)(_(x86_64|amd64|arm64|aarch64|x86|i[3-6]86))?$/i);
+        const host = m?.[1] ?? model;
+        return `${this.pseudo('host', host)}${m?.[2] ?? ''}`;
+    }
+
     /** Pseudonymize only real IP addresses (Xray rules use the same "ip" key for geoip:… lists). */
     private pseudoIp(value: unknown): unknown {
         if (typeof value === 'string') return IP_RE.test(value) ? this.pseudo('ip', value) : value;
@@ -109,6 +119,8 @@ export class Privacy {
             const isUser = inUser || ('shortUuid' in obj && ('expireAt' in obj || 'status' in obj));
             const out: Record<string, unknown> = {};
             for (const [k, v] of Object.entries(obj)) out[k] = this.apply(v, k, isUser);
+            // HWID device of a computer: deviceModel carries the computer name, e.g. "DESKTOP-QQNA3B4_x86_64"
+            if (strict && typeof obj.deviceModel === 'string' && 'hwid' in obj) out.deviceModel = this.pcName(obj.deviceModel, obj.platform);
             return out;
         }
         return value;

@@ -2,23 +2,37 @@
   "manifest_version": "0.3",
   "name": "remnawave-mcp",
   "display_name": "Remnawave",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Remnawave 3.x panel in Claude: users, nodes, traffic, devices, GeoCheck. Read-only, secrets and client data hidden.",
   "long_description": "Ask about your Remnawave panel in plain language: online users, offline nodes, traffic, a client's subscription and devices, suspected subscription sharing, GeoCheck.\n\n- Read-only: nothing in the panel can be changed.\n- Tools are generated from the official @remnawave/backend-contract.\n- Privacy filter on your computer: Reality keys, passwords, UUIDs and connection links are hidden; client usernames, e-mails, Telegram IDs, IPs and HWIDs are replaced with pseudonyms.\n- The API token is stored in the system keychain.",
-  "author": { "name": "3APA3A-3AHO3A", "url": "https://github.com/3APA3A-3AHO3A" },
-  "repository": { "type": "git", "url": "https://github.com/3APA3A-3AHO3A/remnawave-mcp" },
+  "author": {
+    "name": "3APA3A-3AHO3A",
+    "url": "https://github.com/3APA3A-3AHO3A"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/3APA3A-3AHO3A/remnawave-mcp"
+  },
   "homepage": "https://github.com/3APA3A-3AHO3A/remnawave-mcp",
   "documentation": "https://github.com/3APA3A-3AHO3A/remnawave-mcp#readme",
   "support": "https://github.com/3APA3A-3AHO3A/remnawave-mcp/issues",
   "icon": "icon.png",
   "license": "MIT",
-  "keywords": ["remnawave", "xray", "vpn", "vless", "panel"],
+  "keywords": [
+    "remnawave",
+    "xray",
+    "vpn",
+    "vless",
+    "panel"
+  ],
   "server": {
     "type": "node",
     "entry_point": "dist/index.js",
     "mcp_config": {
       "command": "node",
-      "args": ["${__dirname}/dist/index.js"],
+      "args": [
+        "${__dirname}/dist/index.js"
+      ],
       "env": {
         "REMNAWAVE_BASE_URL": "${user_config.base_url}",
         "REMNAWAVE_API_TOKEN": "${user_config.api_token}",
@@ -32,14 +46,42 @@
   },
   "tools_generated": true,
   "prompts": [
-    { "name": "daily_summary", "description": "Panel summary: users, online, offline nodes, traffic, expiring subscriptions", "text": "daily_summary" },
-    { "name": "client_review", "description": "Subscription, devices, traffic and recent requests of one client", "arguments": ["user"], "text": "client_review" },
-    { "name": "sharing_audit", "description": "Clients who probably share their subscription", "text": "sharing_audit" },
-    { "name": "node_check", "description": "Offline nodes, load balance, optional GeoCheck", "arguments": ["node"], "text": "node_check" }
+    {
+      "name": "daily_summary",
+      "description": "Panel summary: users, online, offline nodes, traffic, expiring subscriptions",
+      "text": "daily_summary"
+    },
+    {
+      "name": "client_review",
+      "description": "Subscription, devices, traffic and recent requests of one client",
+      "arguments": [
+        "user"
+      ],
+      "text": "client_review"
+    },
+    {
+      "name": "sharing_audit",
+      "description": "Clients who probably share their subscription",
+      "text": "sharing_audit"
+    },
+    {
+      "name": "node_check",
+      "description": "Offline nodes, load balance, optional GeoCheck",
+      "arguments": [
+        "node"
+      ],
+      "text": "node_check"
+    }
   ],
   "compatibility": {
-    "platforms": ["win32", "darwin", "linux"],
-    "runtimes": { "node": ">=22.0.0" }
+    "platforms": [
+      "win32",
+      "darwin",
+      "linux"
+    ],
+    "runtimes": {
+      "node": ">=22.0.0"
+    }
   },
   "user_config": {
     "base_url": {

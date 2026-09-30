@@ -60,3 +60,17 @@ test('error texts: links, IPs, e-mails and known values are scrubbed', () => {
     const msg = p.text(`User ${PII.username} (${PII.email}) from ${PII.ip} failed: ${SECRETS.link}`);
     assertNoLeak(assert, msg, [PII.username, PII.email, PII.ip, SECRETS.vlessUuid]);
 });
+
+test('strict: computer names in HWID device models become pseudonyms, phones stay as is', () => {
+    const p = new Privacy('strict');
+    const out = p.apply({ devices: [
+        { hwid: 'h1', platform: 'Windows', deviceModel: 'DESKTOP-QQNA3B4_x86_64' },
+        { hwid: 'h2', platform: 'iOS', deviceModel: 'iPhone 15 Pro Max' },
+        { hwid: 'h3', platform: 'Linux', deviceModel: 'ivan-thinkpad' },
+    ] });
+    const s = JSON.stringify(out);
+    assertNoLeak(assert, s, ['QQNA3B4', 'ivan-thinkpad']);
+    assert.match(out.devices[0].deviceModel, /^host~[0-9a-f]{6}_x86_64$/);
+    assert.equal(out.devices[1].deviceModel, 'iPhone 15 Pro Max');
+    assert.equal(new Privacy('basic').apply({ hwid: 'h', platform: 'Windows', deviceModel: 'DESKTOP-X' }).deviceModel, 'DESKTOP-X');
+});

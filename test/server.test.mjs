@@ -36,7 +36,12 @@ function mockClient(log, panelVersion = '3.4.4') {
             if (path.startsWith('/api/bandwidth-stats/users/5')) return { categories: [], sparklineData: [], topNodes: [] };
             if (path === '/api/hwid/devices/top-users') return { users: [{ userId: 5, username: PII.username, devicesCount: 7 }] };
             if (path === '/api/system/stats') return { users: { statusCounts: { ACTIVE: 1 }, totalUsers: 1 }, onlineStats: { onlineNow: 1 }, memory: { used: 1, total: 2 }, cpu: { cores: 4 } };
-            if (path === '/api/nodes/') return [{ uuid: 'n1', name: 'NL-1', countryCode: 'NL', isConnected: false, isDisabled: false, usersOnline: 0, lastStatusMessage: 'timeout', trafficUsedBytes: 1073741824, versions: null }];
+            if (path === '/api/nodes/') return [{
+                uuid: 'n1', name: 'NL-1', countryCode: 'NL', address: '5.6.7.8', isConnected: false, isDisabled: false, usersOnline: 0,
+                lastStatusMessage: 'timeout', trafficUsedBytes: 1073741824, versions: null, tags: [],
+                configProfile: { activeConfigProfileUuid: 'c1', activeInbounds: [{ tag: 'VLESS', port: 443, network: 'raw', security: 'reality', type: 'vless' }] },
+                system: { info: { cpus: 2, memoryTotal: 4 * 1073741824, hostname: 'vps-1', cpuModel: 'X'.repeat(3000), networkInterfaces: ['eth0'] }, stats: { memoryUsed: 1073741824, uptime: 86400, loadAvg: [0.1, 0.2, 0.3] } },
+            }];
             if (path === '/api/system/stats/bandwidth') return { bandwidthLastTwoDays: {} };
             if (path.startsWith('/api/connections/geocheck/n1')) return { jobId: 'j1' };
             if (path === '/api/connections/geocheck/j1') return { isCompleted: true, isFailed: false, result: { success: true, nodeUuid: 'n1', image: { data: 'x' }, rawReport: { ip: '5.6.7.8' } } };
@@ -180,4 +185,26 @@ test('newer panel: warning suggests updating', async () => {
     const { call } = await connect(undefined, '9.1.0');
     const { text } = await call('get_nodes', {});
     assert.match(text, /Update remnawave-mcp/);
+});
+
+test('get_nodes: compact by default, raw with full: true', async () => {
+    const { call } = await connect();
+    const compact = JSON.parse((await call('get_nodes', {})).text);
+    assert.deepEqual(compact[0].inbounds, ['VLESS']);
+    assert.equal(compact[0].state, 'OFFLINE');
+    assert.equal(compact[0].server.memTotalGb, 4);
+    const rawText = (await call('get_nodes', { full: true })).text;
+    assert.ok(rawText.length > JSON.stringify(compact).length * 3);
+    assert.ok(JSON.parse(rawText)[0].system.info.hostname);
+});
+
+test('write tools carry warnings only in write mode', async () => {
+    const ro = (await (await connect()).client.listTools()).tools;
+    assert.ok(ro.every((t) => !t.description.includes('⚠')));
+    const rw = (await (await connect({ readonly: false })).client.listTools()).tools;
+    const d = (n) => rw.find((t) => t.name === n).description;
+    assert.match(d('update_config_profile'), /REPLACES the whole Xray config/);
+    assert.match(d('bulk_all_extend_expiration_date'), /ALL users/);
+    assert.match(d('delete_user'), /Irreversible/);
+    assert.match(d('update_user'), /confirm with the user/);
 });

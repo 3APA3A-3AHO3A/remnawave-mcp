@@ -14,6 +14,8 @@ import { render } from './format.js';
 import { Cooldown, capPageSize } from './limits.js';
 import { prompts } from './prompts.js';
 import { VersionCheck } from './version.js';
+import { VIEWS } from './views.js';
+import { writeHint } from './hints.js';
 
 export function selectTools(all: ApiTool[], cfg: Config) {
     return all.filter(
@@ -121,8 +123,18 @@ export function createServer(opts: {
             })),
             ...tools.map((t) => ({
                 name: t.name,
-                description: t.description,
-                inputSchema: t.inputSchema,
+                description:
+                    (VIEWS[t.name] ? `${t.description}\nReturns a compact view; pass full: true for the raw panel response.` : t.description) +
+                    (t.kind === 'write' ? `\n${writeHint(t.name)}` : ''),
+                inputSchema: VIEWS[t.name]
+                    ? {
+                          ...t.inputSchema,
+                          properties: {
+                              ...(t.inputSchema.properties as object),
+                              full: { type: 'boolean', default: false, description: 'Return the raw panel response (large)' },
+                          },
+                      }
+                    : t.inputSchema,
                 annotations: {
                     readOnlyHint: t.kind === 'read',
                     destructiveHint: t.kind === 'write' && (t.method === 'DELETE' || /delete|revoke|truncate|reset/i.test(t.name)),
@@ -145,7 +157,9 @@ export function createServer(opts: {
             } else {
                 const t = byName.get(name);
                 if (!t) throw new Error(`Unknown tool: ${name}`);
-                data = await callApi(client, t, args);
+                const { full, ...apiArgs } = args;
+                data = await callApi(client, t, VIEWS[name] ? apiArgs : args);
+                if (VIEWS[name] && full !== true) data = VIEWS[name](data);
             }
             const v = await versions.get();
             if (name === 'panel_overview' && data && typeof data === 'object')

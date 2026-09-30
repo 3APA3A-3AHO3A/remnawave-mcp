@@ -12,7 +12,7 @@ MCP server for the [Remnawave](https://github.com/remnawave) **3.x** panel. It l
 - **A leaked chat leaks neither keys nor clients.** Reality private keys, passwords, UUIDs and connection links are hidden; client personal data (username, email, Telegram ID, IP, HWID) is replaced with pseudonyms. See [Privacy](#privacy).
 - **Ready-made reports in one call:** `panel_overview` (panel summary), `user_report` (everything about a client), `sharing_suspects` (who shares a subscription), plus `find_user`, `geocheck_node`, `node_connections`, `user_connections`.
 - **Prompt templates** in the Claude menu: "Panel summary", "Client review", "Sharing audit", "Node check".
-- **Gentle on nodes and limits:** a repeated GeoCheck of the same node within 30 minutes returns the previous result; responses are compacted (2–3× fewer tokens).
+- **Gentle on nodes and limits:** a repeated GeoCheck of the same node within 30 minutes returns the previous result; responses are compacted (2–3× fewer tokens), the node list is short by default (`full: true` for the raw one).
 - **One-click install** — a `.mcpb` extension for Claude Desktop; the token is kept in the system keychain.
 
 ## Compatibility
@@ -77,6 +77,19 @@ npm run list-tools
 The last line should look like `79 API tools + 7 extra (contract 3.4.4)`. Then [connect it to Claude Desktop](#claude-desktop).
 
 macOS / Linux: same commands, any path.
+
+### Claude Code
+
+After the option 2 steps (clone and build) register the server with one command:
+
+```bash
+claude mcp add remnawave --scope user -e REMNAWAVE_BASE_URL=https://panel.example.com -e REMNAWAVE_API_TOKEN=YOUR_TOKEN -- node /path/to/remnawave-mcp/dist/index.js
+```
+
+- `--scope user` — available in every project.
+- `--scope local` — only in the current project. Handy for **different panels in different projects**: run `claude mcp add` in each project with its own URL and token. The settings live in your personal Claude Code config, not in the repository, so the token can't be committed by accident.
+- Avoid `--scope project`: it writes the server with its token into `.mcp.json`, which usually ends up in git.
+- Check: `claude mcp list` — the server should be `✓ Connected`.
 
 ## API token
 
@@ -208,7 +221,7 @@ src/
 ## For developers
 
 ```bash
-npm test                    # 33 tests: privacy (nothing leaks), reports, limits, tool list
+npm test                    # 36 tests: privacy (nothing leaks), reports, limits, tool list
 npm run pack:mcpb           # extension for the current version → build/remnawave-3.4.mcpb
 npm run pack:mcpb -- --all  # for every 3.x version → build/remnawave-3.0.mcpb … remnawave-3.4.mcpb
 ```
@@ -227,7 +240,7 @@ Everything the server returns ends up in the chat history, so panel responses ar
 | VLESS UUID, `vless://`, `ss://`… links, subscription shortUuid & URL | hidden | hidden | visible |
 | "Connection keys" and "raw subscription" tools | unavailable | unavailable | available |
 | username, email, Telegram ID, client notes | pseudonym | visible | visible |
-| client IP addresses, HWID (incl. device IDs in User-Agent) | pseudonym | visible | visible |
+| client IP addresses, HWID (incl. device IDs in User-Agent), client computer names (`DESKTOP-…`) | pseudonym | visible | visible |
 | panel user ID, status, traffic, dates, nodes, statistics | visible | visible | visible |
 
 **Pseudonyms.** Instead of `ivan_petrov` the model sees `user~dca596`, instead of an IP — `ip~f055f3`. Equal values get equal pseudonyms, so the model can still notice "two clients share an IP" without learning it. A pseudonym can be passed back as a tool argument — the server resolves it locally.
