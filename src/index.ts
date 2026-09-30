@@ -5,7 +5,8 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprot
 import { loadConfig } from './config.js';
 import { RemnawaveClient } from './client.js';
 import { buildRegistry, type ApiTool } from './registry.js';
-import { extraTools } from './extras.js';
+import { availableExtras } from './extras.js';
+import { Privacy } from './redact.js';
 import { createRequire } from 'node:module';
 
 // Versions are read from package.json files, so nothing has to be edited by hand after an update.
@@ -17,6 +18,7 @@ function selectTools(all: ApiTool[], cfg: ReturnType<typeof loadConfig>) {
     return all.filter(
         (t) =>
             (!cfg.readonly || t.kind === 'read') &&
+            (cfg.showSecrets || !t.secret) &&
             !cfg.exclude.has(t.name) &&
             (!cfg.include || cfg.include.has(t.name)),
     );
@@ -77,9 +79,10 @@ function format(data: unknown, max: number) {
 
 async function main() {
     const all = buildRegistry();
+    const extraTools = availableExtras();
 
     if (process.argv.includes('--list-tools')) {
-        const ro = process.argv.includes('--all') ? all : all.filter((t) => t.kind === 'read');
+        const ro = process.argv.includes('--all') ? all : all.filter((t) => t.kind === 'read' && !t.secret);
         for (const t of ro) console.log(`${t.kind.padEnd(5)} ${t.name.padEnd(48)} ${t.method} ${t.path}`);
         for (const e of extraTools) console.log(`extra ${e.name}`);
         console.log(`\n${ro.length} API tools + ${extraTools.length} extra (contract ${CONTRACT_VERSION})`);
@@ -88,6 +91,8 @@ async function main() {
 
     const cfg = loadConfig();
     const client = new RemnawaveClient(cfg);
+    const privacy = new Privacy(cfg.privacy, cfg.privacySalt);
+    const nodePrivacy = new Privacy(cfg.privacy === 'strict' ? 'basic' : cfg.privacy);
     const tools = selectTools(all, cfg);
     const extras = extraTools.filter(
         (e) => !cfg.exclude.has(e.name) && (!cfg.include || cfg.include.has(e.name)),
@@ -104,7 +109,15 @@ async function main() {
                 (cfg.readonly ? 'READ-ONLY mode: no changes are possible. ' : 'Write tools are enabled — confirm with the user before any change. ') +
                 'In Remnawave 3.x users are addressed by numeric userId (not uuid). ' +
                 'To find a user by Telegram ID / email / username use find_user. ' +
-                'Nodes, hosts and squads are addressed by uuid — get them via get_nodes / get_hosts first.',
+                'Nodes, hosts and squads are addressed by uuid — get them via get_nodes / get_hosts first. ' +
+                (cfg.privacy === 'off'
+                    ? ''
+                    : 'Credentials (private keys, passwords, user UUIDs, connection links) are masked as [hidden] on purpose. ') +
+                (cfg.privacy === 'strict'
+                    ? 'Client personal data (username, email, Telegram ID, IPs, HWID, notes) is replaced with pseudonyms like user~3fa2c1 / ip~91b0d4. ' +
+                      'Pseudonyms are stable, so equal pseudonyms mean equal values; you can pass a pseudonym back as a tool argument and it will be resolved locally. ' +
+                      'Refer to users by their numeric id or pseudonym, never ask the user to reveal the real data.'
+                    : ''),
         },
     );
 
@@ -130,17 +143,20 @@ async function main() {
 
     server.setRequestHandler(CallToolRequestSchema, async (req) => {
         const name = req.params.name;
-        const args = (req.params.arguments ?? {}) as Record<string, unknown>;
+        const args = privacy.restore(req.params.arguments ?? {}) as Record<string, unknown>;
         try {
             let data: unknown;
+            let filter = privacy;
             const extra = extraByName.get(name);
+            if (extra?.userData === false) filter = nodePrivacy;
             if (extra) data = await extra.run(client, args);
             else {
                 const t = byName.get(name);
                 if (!t) throw new Error(`Unknown tool: ${name}`);
                 data = await callApi(client, t, args);
             }
-            return { content: [{ type: 'text', text: format(data, cfg.maxResponseChars) }] };
+            const safe = filter.apply(data);
+            return { content: [{ type: 'text', text: format(safe, cfg.maxResponseChars) }] };
         } catch (e) {
             return { isError: true, content: [{ type: 'text', text: e instanceof Error ? e.message : String(e) }] };
         }

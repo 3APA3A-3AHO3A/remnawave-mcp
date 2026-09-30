@@ -1,0 +1,20 @@
+# Бот раз в неделю проверяет новые версии зависимостей и открывает PR.
+# Главное — @remnawave/backend-contract: новая версия = поддержка новой версии панели.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      remnawave-contract:
+        patterns: ["@remnawave/backend-contract"]
+      mcp-and-zod:
+        patterns: ["@modelcontextprotocol/sdk", "zod"]
+      dev:
+        dependency-type: development
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

@@ -3,6 +3,11 @@ export interface Config {
     headers: Record<string, string>;
     /** true — only tools with kind "read" are exposed */
     readonly: boolean;
+    /** strict (default) | basic | off — see src/redact.ts */
+    privacy: 'strict' | 'basic' | 'off';
+    privacySalt?: string;
+    /** privacy === 'off': credential-only tools are exposed too */
+    showSecrets: boolean;
     exclude: Set<string>;
     include: Set<string> | null;
     maxResponseChars: number;
@@ -33,6 +38,11 @@ export function loadConfig(): Config {
 
     // Safe by default: write tools appear only with REMNAWAVE_READONLY=false.
     const readonly = (process.env.REMNAWAVE_READONLY ?? 'true').toLowerCase() !== 'false';
+    let privacy = (process.env.REMNAWAVE_PRIVACY ?? 'strict').toLowerCase();
+    if ((process.env.REMNAWAVE_SHOW_SECRETS ?? '').toLowerCase() === 'true') privacy = 'off';
+    if (!['strict', 'basic', 'off'].includes(privacy))
+        throw new Error('REMNAWAVE_PRIVACY must be strict, basic or off');
+    const showSecrets = privacy === 'off';
     const include = csv(process.env.REMNAWAVE_TOOLS_INCLUDE);
 
     return {
@@ -40,6 +50,9 @@ export function loadConfig(): Config {
         baseUrl: baseUrl.replace(/\/+$/, '').replace(/\/api$/, ''),
         headers,
         readonly,
+        privacy: privacy as Config['privacy'],
+        privacySalt: process.env.REMNAWAVE_PRIVACY_SALT || undefined,
+        showSecrets,
         exclude: new Set(csv(process.env.REMNAWAVE_TOOLS_EXCLUDE)),
         include: include.length ? new Set(include) : null,
         maxResponseChars: Number(process.env.REMNAWAVE_MAX_RESPONSE_CHARS ?? 60000),

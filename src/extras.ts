@@ -1,3 +1,4 @@
+import * as contract from '@remnawave/backend-contract';
 import type { RemnawaveClient } from './client.js';
 
 /**
@@ -9,6 +10,10 @@ import type { RemnawaveClient } from './client.js';
 
 export interface ExtraTool {
     name: string;
+    /** contract commands this tool relies on; the tool is hidden if the installed contract lacks them */
+    requires: string[];
+    /** false — response is about our own infrastructure (node IPs), skip personal-data pseudonyms */
+    userData?: boolean;
     description: string;
     inputSchema: Record<string, unknown>;
     run: (client: RemnawaveClient, args: Record<string, unknown>) => Promise<unknown>;
@@ -47,6 +52,7 @@ const timeoutParam = {
 export const extraTools: ExtraTool[] = [
     {
         name: 'find_user',
+        requires: ['GetUsersStreamCommand', 'GetUserByIdCommand'],
         description:
             'Find users by any identifier: id, username, shortUuid, telegramId, email or tag. ' +
             'Returns full user objects. Use this instead of guessing which endpoint to call.',
@@ -77,6 +83,8 @@ export const extraTools: ExtraTool[] = [
     },
     {
         name: 'geocheck_node',
+        userData: false,
+        requires: ['GeocheckByNodeCommand', 'GeocheckByNodeResultCommand'],
         description:
             'Run GeoCheck on a node and wait for the result (how services see the node IP: country, blocks). ' +
             'The base64 SVG image is dropped, only the raw report is returned. Uses a bit of node traffic.',
@@ -108,6 +116,7 @@ export const extraTools: ExtraTool[] = [
     },
     {
         name: 'node_connections',
+        requires: ['ConnectionsByNodeCommand', 'ConnectionsByNodeResultCommand'],
         description: 'Get users currently connected to a node with their IPs and last-seen time (starts a job and waits).',
         inputSchema: {
             type: 'object',
@@ -126,6 +135,7 @@ export const extraTools: ExtraTool[] = [
     },
     {
         name: 'user_connections',
+        requires: ['ConnectionsByUserCommand', 'ConnectionsByUserResultCommand'],
         description: "Get a user's current connections (IPs per node) — starts a job and waits for the result.",
         inputSchema: {
             type: 'object',
@@ -143,3 +153,9 @@ export const extraTools: ExtraTool[] = [
             ),
     },
 ];
+
+/** Extra tools supported by the installed contract version. */
+export function availableExtras(): ExtraTool[] {
+    const c = contract as Record<string, unknown>;
+    return extraTools.filter((e) => e.requires.every((r) => r in c));
+}

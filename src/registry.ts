@@ -25,6 +25,7 @@ interface ContractCommand {
 }
 
 export interface ApiTool {
+    secret: boolean;
     name: string;
     command: string;
     method: string;
@@ -63,6 +64,13 @@ const ALWAYS_BLOCKED = new Set([
     'ConnectionsByUserResultCommand',
     'GeocheckByNodeCommand',
     'GeocheckByNodeResultCommand',
+]);
+
+/** Endpoints whose whole purpose is to return client credentials — hidden unless REMNAWAVE_SHOW_SECRETS=true. */
+export const SECRET_ONLY = new Set([
+    'GetConnectionKeysByUserIdCommand',
+    'GetConnectionKeysByUuidCommand', // 2.x name
+    'GetRawSubscriptionByShortUuidCommand',
 ]);
 
 /** Endpoints marked "write" in the contract that do not change anything. */
@@ -131,8 +139,12 @@ export function buildRegistry(): ApiTool[] {
         const path = typeof cmd.url === 'string' ? cmd.url : cmd.TSQ_url;
         const pathParams = [...path.matchAll(/:([A-Za-z0-9_]+)/g)].map((m) => m[1]);
         const d = cmd.endpointDetails;
-        const kind = EFFECTIVELY_READ.has(name) || d.SCOPE_KIND === 'read' ? 'read' : 'write';
         const method = d.REQUEST_METHOD.toUpperCase();
+        // Contracts older than ~2.8.2x have no read/write marks: fall back to "GET = read".
+        const kind =
+            EFFECTIVELY_READ.has(name) || d.SCOPE_KIND === 'read' || (!d.SCOPE_KIND && method === 'GET')
+                ? 'read'
+                : 'write';
         const body = method === 'GET' ? undefined : cmd.RequestBodySchema;
 
         const description = [
@@ -144,6 +156,7 @@ export function buildRegistry(): ApiTool[] {
             .join('\n');
 
         tools.push({
+            secret: SECRET_ONLY.has(name),
             name: toolName(name),
             command: name,
             method,
