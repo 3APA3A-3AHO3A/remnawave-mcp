@@ -16,7 +16,12 @@ updates:
         patterns: ["@modelcontextprotocol/sdk"]
       dev:
         dependency-type: development
+  # инструменты сборки на GitHub: раз в неделю и ОДНИМ общим PR —
+  # они правят одни и те же файлы, отдельные PR конфликтовали бы друг с другом
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: daily
+      interval: weekly
+    groups:
+      github-actions:
+        patterns: ["*"]
