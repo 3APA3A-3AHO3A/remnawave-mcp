@@ -6,20 +6,20 @@
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/releases/latest"><img alt="release" src="https://img.shields.io/github/v/release/3APA3A-3AHO3A/remnawave-mcp?label=release&color=1f6feb"></a>
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/3APA3A-3AHO3A/remnawave-mcp/ci.yml?branch=main&label=CI"></a>
   <a href="https://github.com/remnawave"><img alt="Remnawave" src="https://img.shields.io/badge/Remnawave-3.0%20%E2%80%93%203.4.5-0e8a9e"></a>
-  <a href="https://modelcontextprotocol.io"><img alt="MCP" src="https://img.shields.io/badge/MCP-Claude%20%C2%B7%20Cursor%20%C2%B7%20Windsurf-8957e5"></a>
+  <a href="https://modelcontextprotocol.io"><img alt="MCP" src="https://img.shields.io/badge/MCP-Claude%20%C2%B7%20Cursor%20%C2%B7%20VS%20Code%20%C2%B7%20any%20client-8957e5"></a>
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/actions/workflows/ci.yml"><img alt="tests" src="https://img.shields.io/badge/tests-42%20passed-3fb950"></a>
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/pkgs/container/remnawave-mcp"><img alt="docker" src="https://img.shields.io/badge/docker-ghcr.io%20%C2%B7%20amd64%20%7C%20arm64-1f6feb"></a>
   <a href="LICENSE"><img alt="license" src="https://img.shields.io/github/license/3APA3A-3AHO3A/remnawave-mcp?color=6e7681"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/releases/latest">⬇️ Download</a> &nbsp;·&nbsp; <a href="#documentation">📘 Docs</a> &nbsp;·&nbsp; <a href="#option-3--docker-on-the-panel-server-claude-code">🐳 Docker</a> &nbsp;·&nbsp; <a href="README.md">🇷🇺 Русский</a>
+  <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/releases/latest">⬇️ Download</a> &nbsp;·&nbsp; <a href="#documentation">📘 Docs</a> &nbsp;·&nbsp; <a href="#connecting-a-client">🧩 Clients</a> &nbsp;·&nbsp; <a href="#option-3--docker-on-the-panel-server-claude-code">🐳 Docker</a> &nbsp;·&nbsp; <a href="README.md">🇷🇺 Русский</a>
 </p>
 
-MCP server for the [Remnawave](https://github.com/remnawave) **3.x** panel. It gives Claude Desktop, Claude Code, Cursor, Windsurf and other MCP clients access to users, nodes, traffic, devices, connections and GeoCheck — **read-only** and with a **privacy filter** on your side.
+MCP server for the [Remnawave](https://github.com/remnawave) **3.x** panel. It gives AI assistants — Claude, Cursor, VS Code (Copilot), Windsurf, Codex, Gemini CLI and any other MCP client — access to users, nodes, traffic, devices, connections and GeoCheck. **Read-only**, with a **privacy filter** on your side.
 
 > [!TIP]
-> **Quick start.** Download `remnawave-3.4.mcpb` (or the file for your panel version) from the [latest release](https://github.com/3APA3A-3AHO3A/remnawave-mcp/releases/latest) and open it in Claude Desktop — details in “Installation” below.
+> **Quick start in Claude Desktop.** Download `remnawave-3.4.mcpb` (or the file for your panel version) from the [latest release](https://github.com/3APA3A-3AHO3A/remnawave-mcp/releases/latest) and open it. Other clients — see “Connecting a client” below.
 
 > [!IMPORTANT]
 > **Privacy.** Panel responses are filtered on your machine before they reach the chat: keys and passwords are hidden, clients are replaced with pseudonyms like `user~3fa2c1`.
@@ -27,7 +27,7 @@ MCP server for the [Remnawave](https://github.com/remnawave) **3.x** panel. It g
 ## What it looks like
 
 <p align="center">
-  <img src="docs/demo.en.svg" alt="Example: a question about expiring subscriptions and Claude’s answer with a pseudonym instead of the client name" width="100%">
+  <img src="docs/demo.en.svg" alt="Example: a question about expiring subscriptions and the AI answer with a pseudonym instead of the client name" width="100%">
 </p>
 
 ## Features
@@ -37,7 +37,7 @@ MCP server for the [Remnawave](https://github.com/remnawave) **3.x** panel. It g
 - **Secrets are never exposed:** panel login, passkeys, node SECRET_KEY, API tokens.
 - **A leaked chat leaks neither keys nor clients.** Reality private keys, passwords, UUIDs and connection links are hidden; client personal data (username, email, Telegram ID, IP, HWID) is replaced with pseudonyms. See [Privacy](#privacy).
 - **Ready-made reports in one call:** `panel_overview` (panel summary), `user_report` (everything about a client), `sharing_suspects` (who shares a subscription), plus `find_user`, `geocheck_node`, `node_connections`, `user_connections`.
-- **Prompt templates** in the Claude menu: "Panel summary", "Client review", "Sharing audit", "Node check".
+- **Prompt templates** (the “+” menu in Claude, “/” commands in VS Code): "Panel summary", "Client review", "Sharing audit", "Node check".
 - **Gentle on nodes and limits:** a repeated GeoCheck of the same node within 30 minutes returns the previous result; responses are compacted (2–3× fewer tokens), the node list is short by default (`full: true` for the raw one).
 - **One-click install** — a `.mcpb` extension for Claude Desktop; the token is kept in the system keychain. For servers — a **Docker image** per panel version.
 
@@ -56,7 +56,7 @@ The contract version should match your panel version at least in the first two n
 
 ```mermaid
 flowchart LR
-    A["Claude / Cursor<br/>MCP client"] -- stdio --> B["<b>remnawave-mcp</b><br/>privacy filter<br/>read-only · reports"]
+    A["AI client<br/>Claude · Cursor · VS Code…"] -- stdio --> B["<b>remnawave-mcp</b><br/>privacy filter<br/>read-only · reports"]
     B -- HTTPS --> C["Remnawave API<br/>REST, token"]
     C --> D["Nodes<br/>Xray"]
 ```
@@ -64,7 +64,7 @@ flowchart LR
 ## Documentation
 
 <details>
-<summary><b>📦 Installation — extension, manual, Claude Code, Docker</b></summary>
+<summary><b>📦 Installation — Claude Desktop extension, from source, Docker</b></summary>
 
 ### Installation
 #### Option 1 — Claude Desktop extension (easiest)
@@ -87,9 +87,9 @@ flowchart LR
 
 Only Claude Desktop is needed — it ships its own Node.js. The token is stored in the Windows/macOS keychain, not as plain text. To update (new remnawave-mcp release or new panel version), download the matching `.mcpb` and open it the same way.
 
-> An extension connects **one** panel. For several panels or for Cursor / Windsurf use option 2.
+> An extension connects **one** panel. For several panels and for other clients (Cursor, VS Code, Windsurf…) use option 2 or 3.
 
-#### Option 2 — manual (several panels, other MCP clients)
+#### Option 2 — from source (any MCP client)
 
 Requires [Node.js](https://nodejs.org) 22+ and Git.
 
@@ -111,26 +111,13 @@ npm run build
 npm run list-tools
 ```
 
-The last line should look like `79 API tools + 7 extra (contract 3.4.5)`. Then [connect it to Claude Desktop](#claude-desktop).
+The last line should look like `79 API tools + 7 extra (contract 3.4.5)`. Then [connect your client](#connecting-a-client).
 
 macOS / Linux: same commands, any path.
 
-#### Claude Code
-
-After the option 2 steps (clone and build) register the server with one command:
-
-```bash
-claude mcp add remnawave --scope user -e REMNAWAVE_BASE_URL=https://panel.example.com -e REMNAWAVE_API_TOKEN=YOUR_TOKEN -- node /path/to/remnawave-mcp/dist/index.js
-```
-
-- `--scope user` — available in every project.
-- `--scope local` — only in the current project. Handy for **different panels in different projects**: run `claude mcp add` in each project with its own URL and token. The settings live in your personal Claude Code config, not in the repository, so the token can't be committed by accident.
-- Avoid `--scope project`: it writes the server with its token into `.mcp.json`, which usually ends up in git.
-- Check: `claude mcp list` — the server should be `✓ Connected`.
-
 #### Option 3 — Docker on the panel server (Claude Code)
 
-If Claude Code runs on the server that hosts the panel, you don't need Node.js — Docker is already there (Remnawave itself runs in Docker).
+No Node.js needed — just Docker. Most convenient on the panel server: Docker is already there (Remnawave itself runs in Docker). The example below is for Claude Code; for other clients see [Docker in any client](#connecting-a-client).
 
 ```bash
 claude mcp add remnawave --scope user \
@@ -163,9 +150,10 @@ With an `http://…` URL the server adds the headers a reverse proxy normally se
 </details>
 
 <details>
-<summary><b>🔑 API token and Claude Desktop setup</b></summary>
+<summary><b>🔑 API token</b></summary>
 
 ### API token
+
 **Panel → Settings → API tokens → Create.** Grant `read` only:
 
 users, nodes, hosts, hwid, connections, bandwidth-stats, system, subscriptions, subscription-request-history, internal-squads, external-squads, config-profiles, node-plugins (other sections on `read` are optional).
@@ -174,9 +162,28 @@ Do not grant `write`, `*`, api-tokens, passkeys, auth or keygen.
 
 > Remnawave scopes are "read/write", not GET/POST. GeoCheck, connection requests and user lookup work with `read` even though they are POST requests.
 
-### Claude Desktop
-_Option 2 only._
+</details>
 
+<details>
+<summary><b>🧩 Connecting a client — Claude, Cursor, VS Code, Windsurf, Cline, Zed, LM Studio, Codex, Gemini CLI</b></summary>
+
+### Connecting a client
+
+It is the same server for every client — only the place for the settings differs. The examples use `C:\Tools\remnawave-mcp\dist\index.js` (after [building from source](#option-2--from-source-any-mcp-client)) — replace it with your path; on macOS / Linux e.g. `/home/user/remnawave-mcp/dist/index.js`. Backslashes are doubled in JSON: `\\`.
+
+**Docker instead of Node.js** — in any client replace `command` and `args`:
+
+```json
+"command": "docker",
+"args": ["run", "-i", "--rm", "-e", "REMNAWAVE_BASE_URL", "-e", "REMNAWAVE_API_TOKEN", "ghcr.io/3apa3a-3aho3a/remnawave-mcp:3.4"],
+```
+
+Open your client:
+
+<details>
+<summary><b>Claude Desktop</b></summary>
+
+Easiest is the [extension](#option-1--claude-desktop-extension-easiest). Manually (several panels):
 
 **Claude → Settings → Developer → Edit Config.** Fully quit Claude (tray → Quit), then add this right after the first `{` in `claude_desktop_config.json`:
 
@@ -204,9 +211,209 @@ Full example: [`examples/claude_desktop_config.example.json`](examples/claude_de
 </details>
 
 <details>
+<summary><b>Claude Code</b></summary>
+
+After the option 2 steps (clone and build) register the server with one command:
+
+```bash
+claude mcp add remnawave --scope user -e REMNAWAVE_BASE_URL=https://panel.example.com -e REMNAWAVE_API_TOKEN=YOUR_TOKEN -- node /path/to/remnawave-mcp/dist/index.js
+```
+
+- `--scope user` — available in every project.
+- `--scope local` — only in the current project. Handy for **different panels in different projects**: run `claude mcp add` in each project with its own URL and token. The settings live in your personal Claude Code config, not in the repository, so the token can't be committed by accident.
+- Avoid `--scope project`: it writes the server with its token into `.mcp.json`, which usually ends up in git.
+- Check: `claude mcp list` — the server should be `✓ Connected`.
+
+</details>
+
+<details>
+<summary><b>Cursor</b></summary>
+
+`~/.cursor/mcp.json` — for all projects, or `.cursor/mcp.json` in a project. The server shows up in **Settings → MCP**.
+
+```json
+{
+  "mcpServers": {
+    "remnawave": {
+      "command": "node",
+      "args": ["C:\\Tools\\remnawave-mcp\\dist\\index.js"],
+      "env": {
+        "REMNAWAVE_BASE_URL": "https://panel.example.com",
+        "REMNAWAVE_API_TOKEN": "YOUR_TOKEN"
+      }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>VS Code (GitHub Copilot)</b></summary>
+
+`.vscode/mcp.json` in a project, or the **MCP: Open User Configuration** command for all projects. The key here is `servers`; VS Code asks for the token on first start and keeps it in secure storage — it never lands in the file.
+
+```json
+{
+  "inputs": [
+    { "type": "promptString", "id": "remnawave-token", "description": "Remnawave API token", "password": true }
+  ],
+  "servers": {
+    "remnawave": {
+      "command": "node",
+      "args": ["C:\\Tools\\remnawave-mcp\\dist\\index.js"],
+      "env": {
+        "REMNAWAVE_BASE_URL": "https://panel.example.com",
+        "REMNAWAVE_API_TOKEN": "${input:remnawave-token}"
+      },
+      "type": "stdio"
+    }
+  }
+}
+```
+
+Prompt templates in Copilot chat — via “/”.
+
+</details>
+
+<details>
+<summary><b>Windsurf</b></summary>
+
+**Settings → Cascade → MCP Servers → View raw config** opens `mcp_config.json`.
+
+```json
+{
+  "mcpServers": {
+    "remnawave": {
+      "command": "node",
+      "args": ["C:\\Tools\\remnawave-mcp\\dist\\index.js"],
+      "env": {
+        "REMNAWAVE_BASE_URL": "https://panel.example.com",
+        "REMNAWAVE_API_TOKEN": "YOUR_TOKEN"
+      }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>Cline</b></summary>
+
+The **MCP Servers** icon in the Cline panel → **Configure** → **Configure MCP Servers** opens `cline_mcp_settings.json`.
+
+```json
+{
+  "mcpServers": {
+    "remnawave": {
+      "command": "node",
+      "args": ["C:\\Tools\\remnawave-mcp\\dist\\index.js"],
+      "env": {
+        "REMNAWAVE_BASE_URL": "https://panel.example.com",
+        "REMNAWAVE_API_TOKEN": "YOUR_TOKEN"
+      }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>Zed</b></summary>
+
+The **zed: open settings file** command (or **Settings → AI → MCP Servers**). The key here is `context_servers`.
+
+```json
+{
+  "context_servers": {
+    "remnawave": {
+      "command": "node",
+      "args": ["C:\\Tools\\remnawave-mcp\\dist\\index.js"],
+      "env": {
+        "REMNAWAVE_BASE_URL": "https://panel.example.com",
+        "REMNAWAVE_API_TOKEN": "YOUR_TOKEN"
+      }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>LM Studio</b></summary>
+
+**Program** tab on the right → **Install → Edit mcp.json**.
+
+```json
+{
+  "mcpServers": {
+    "remnawave": {
+      "command": "node",
+      "args": ["C:\\Tools\\remnawave-mcp\\dist\\index.js"],
+      "env": {
+        "REMNAWAVE_BASE_URL": "https://panel.example.com",
+        "REMNAWAVE_API_TOKEN": "YOUR_TOKEN"
+      }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>Codex CLI</b></summary>
+
+`~/.codex/config.toml` (TOML):
+
+```toml
+[mcp_servers.remnawave]
+command = "node"
+args = ['C:\Tools\remnawave-mcp\dist\index.js']
+
+[mcp_servers.remnawave.env]
+REMNAWAVE_BASE_URL = "https://panel.example.com"
+REMNAWAVE_API_TOKEN = "YOUR_TOKEN"
+```
+
+</details>
+
+<details>
+<summary><b>Gemini CLI</b></summary>
+
+`~/.gemini/settings.json` — for all projects, or `.gemini/settings.json` in a project.
+
+```json
+{
+  "mcpServers": {
+    "remnawave": {
+      "command": "node",
+      "args": ["C:\\Tools\\remnawave-mcp\\dist\\index.js"],
+      "env": {
+        "REMNAWAVE_BASE_URL": "https://panel.example.com",
+        "REMNAWAVE_API_TOKEN": "YOUR_TOKEN"
+      }
+    }
+  }
+}
+```
+
+</details>
+
+> ℹ️ **Not supported:** clients that only connect to remote MCP servers by URL (HTTP) — e.g. ChatGPT and web versions of assistants. remnawave-mcp runs on your computer or server and talks to the client directly (stdio).
+>
+> Your client is not listed? Any client that can launch local MCP servers works: command `node`, the path to `dist/index.js` and two variables — `REMNAWAVE_BASE_URL` and `REMNAWAVE_API_TOKEN`.
+
+</details>
+
+<details>
 <summary><b>⚙️ Configuration (environment variables)</b></summary>
 
 ### Configuration (environment variables)
+
 | Variable | Required | Description |
 |---|---|---|
 | `REMNAWAVE_BASE_URL` | yes | Panel URL: `https://panel.example.com` (no `/api`) |
@@ -232,7 +439,8 @@ Full example: [`examples/claude_desktop_config.example.json`](examples/claude_de
 <summary><b>💬 What to ask</b></summary>
 
 ### What to ask
-The **+** menu in the Claude chat has ready templates: **Panel summary**, **Client review**, **Sharing audit**, **Node check**.
+
+Ready templates (the **+** menu in Claude Desktop, “/” commands in VS Code; in clients without templates just type): **Panel summary**, **Client review**, **Sharing audit**, **Node check**.
 
 Or just ask:
 
@@ -254,6 +462,7 @@ GeoCheck and connection lists run on the node and cost its traffic, so a repeate
 <summary><b>🛡 Privacy — what is hidden in each mode</b></summary>
 
 ### Privacy
+
 Everything the server returns ends up in the chat history, so panel responses are filtered **on your machine**, before they reach the model.
 
 | Data | `strict` (default) | `basic` | `off` |
@@ -282,9 +491,10 @@ Also:
 <summary><b>🩺 Troubleshooting · Updating</b></summary>
 
 ### Troubleshooting
+
 | Symptom | Fix |
 |---|---|
-| **failed** in Settings → Developer | Check the config JSON (commas, braces, `\\` in the path); run `npm run build` |
+| Claude Desktop: **failed** in Settings → Developer | Check the config JSON (commas, braces, `\\` in the path); run `npm run build` |
 | `Remnawave API 401` | Token expired or deleted — create a new one |
 | `Remnawave API 403` | Token lacks `read` on a section — recreate it with the right scopes |
 | `fetch failed` / `ENOTFOUND` / timeout | Panel unreachable or wrong `REMNAWAVE_BASE_URL` |
@@ -293,6 +503,7 @@ Also:
 Logs (Windows): `%APPDATA%\Claude\logs\mcp-server-<name>.log`, macOS: `~/Library/Logs/Claude/`.
 
 ### Updating
+
 ```powershell
 cd C:\Tools\remnawave-mcp
 git pull
@@ -317,6 +528,7 @@ Once a day GitHub Actions compares the latest **stable** Remnawave panel release
 <summary><b>🧪 How it works and for developers</b></summary>
 
 ### How it works
+
 In `@remnawave/backend-contract` every API endpoint is described as a "command": URL, method, zod schemas and a read/write mark. At startup the server walks through all commands and turns each into an MCP tool, validating arguments with the same schemas the panel uses. That is why the code barely depends on the Remnawave version.
 
 ```
@@ -325,7 +537,7 @@ src/
   registry.ts  — tools generated from the contract, block lists
   server.ts    — MCP server: tool list, calls, prompts
   extras.ts    — reports and convenience tools (panel_overview, user_report, …)
-  prompts.ts   — prompt templates for the Claude menu
+  prompts.ts   — prompt templates (MCP prompts)
   redact.ts    — privacy filter: secrets and pseudonyms
   format.ts    — compact output and shortening of long lists
   limits.ts    — GeoCheck repeat limits and list size cap
@@ -335,6 +547,7 @@ src/
 ```
 
 ### For developers
+
 ```bash
 npm test                    # 42 tests: privacy (nothing leaks), reports, limits, tool list
 npm run pack:mcpb           # extension for the current version → build/remnawave-3.4.mcpb

@@ -2,7 +2,7 @@
 <rect x="1" y="1" width="1118" height="198" rx="16" fill="#151b23" stroke="#30363d" stroke-width="2"/>
 <rect x="32" y="34" width="52" height="32" rx="16" fill="#1f6feb"/><text x="58.0" y="56" text-anchor="middle" font-size="16" fill="#fff">Вы</text>
 <text x="100" y="58" font-size="22" fill="#e6edf3">У кого истекает подписка на этой неделе?</text>
-<rect x="32" y="96" width="90" height="32" rx="16" fill="#8957e5"/><text x="77.0" y="118" text-anchor="middle" font-size="16" fill="#fff">Claude</text>
-<text x="138" y="120" font-size="22" fill="#e6edf3">Одна подписка: <tspan font-family="ui-monospace, SFMono-Regular, Consolas, Menlo, monospace" fill="#79c0ff">user~3fa2c1</tspan> — истекает 11 окт. в 11:29 UTC, трафик 42 из 100 ГБ.</text>
+<rect x="32" y="96" width="50" height="32" rx="16" fill="#8957e5"/><text x="57.0" y="118" text-anchor="middle" font-size="16" fill="#fff">ИИ</text>
+<text x="98" y="120" font-size="22" fill="#e6edf3">Одна подписка: <tspan font-family="ui-monospace, SFMono-Regular, Consolas, Menlo, monospace" fill="#79c0ff">user~3fa2c1</tspan> — истекает 11 окт. в 11:29 UTC, трафик 42 из 100 ГБ.</text>
 <text x="34" y="166" font-size="17" fill="#9198a1">↳ вызвано: panel_overview, find_user · имя клиента скрыто псевдонимом</text>
 </svg>
