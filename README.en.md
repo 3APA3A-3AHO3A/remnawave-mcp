@@ -13,13 +13,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/releases/latest">⬇️ Download</a> &nbsp;·&nbsp; <a href="#documentation">📘 Docs</a> &nbsp;·&nbsp; <a href="#connecting-a-client">🧩 Clients</a> &nbsp;·&nbsp; <a href="#option-3--docker-on-the-panel-server-claude-code">🐳 Docker</a> &nbsp;·&nbsp; <a href="README.md">🇷🇺 Русский</a>
+  <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/releases/latest">⬇️ Download</a> &nbsp;·&nbsp; <a href="#documentation">📘 Docs</a> &nbsp;·&nbsp; <a href="#connecting-a-client">🧩 Clients</a> &nbsp;·&nbsp; <a href="#option-2--docker">🐳 Docker</a> &nbsp;·&nbsp; <a href="README.md">🇷🇺 Русский</a>
 </p>
 
 MCP server for the [Remnawave](https://github.com/remnawave) **3.x** panel. It gives AI assistants — Claude, Cursor, VS Code (Copilot), Windsurf, Codex, Gemini CLI and any other MCP client — access to users, nodes, traffic, devices, connections and GeoCheck. **Read-only**, with a **privacy filter** on your side.
 
 > [!TIP]
-> **Quick start in Claude Desktop.** Download `remnawave-3.4.mcpb` (or the file for your panel version) from the [latest release](https://github.com/3APA3A-3AHO3A/remnawave-mcp/releases/latest) and open it. Other clients — see “Connecting a client” below.
+> **Quick start.** In Claude Desktop — download `remnawave-3.4.mcpb` from the [latest release](https://github.com/3APA3A-3AHO3A/remnawave-mcp/releases/latest) and open it, that’s all. In any other client — build the server with three commands or pull the Docker image, then paste the ready settings block from “Connecting a client” below.
 
 > [!IMPORTANT]
 > **Privacy.** Panel responses are filtered on your machine before they reach the chat: keys and passwords are hidden, clients are replaced with pseudonyms like `user~3fa2c1`.
@@ -37,9 +37,9 @@ MCP server for the [Remnawave](https://github.com/remnawave) **3.x** panel. It g
 - **Secrets are never exposed:** panel login, passkeys, node SECRET_KEY, API tokens.
 - **A leaked chat leaks neither keys nor clients.** Reality private keys, passwords, UUIDs and connection links are hidden; client personal data (username, email, Telegram ID, IP, HWID) is replaced with pseudonyms. See [Privacy](#privacy).
 - **Ready-made reports in one call:** `panel_overview` (panel summary), `user_report` (everything about a client), `sharing_suspects` (who shares a subscription), plus `find_user`, `geocheck_node`, `node_connections`, `user_connections`.
-- **Prompt templates** (the “+” menu in Claude, “/” commands in VS Code): "Panel summary", "Client review", "Sharing audit", "Node check".
+- **Prompt templates** in clients that support MCP prompts: "Panel summary", "Client review", "Sharing audit", "Node check".
 - **Gentle on nodes and limits:** a repeated GeoCheck of the same node within 30 minutes returns the previous result; responses are compacted (2–3× fewer tokens), the node list is short by default (`full: true` for the raw one).
-- **One-click install** — a `.mcpb` extension for Claude Desktop; the token is kept in the system keychain. For servers — a **Docker image** per panel version.
+- **Three ways to install:** build from source (Node.js) or a Docker image per panel version — for any client; for Claude Desktop also a one-click extension with the token kept in the system keychain.
 
 ## Compatibility
 
@@ -50,7 +50,7 @@ MCP server for the [Remnawave](https://github.com/remnawave) **3.x** panel. It g
 | **2.8.x** | ⚠️ not officially supported: core tools build, but not tested against a live panel; some extra tools are unavailable |
 | **2.7 and older** | ❌ use [TrackLine/mcp-remnawave](https://github.com/TrackLine/mcp-remnawave) |
 
-The contract version should match your panel version at least in the first two numbers. The server adapts to the installed contract (routes, parameters and the tool list come from it) and checks the panel version on connect: if it differs, you get a warning in the chat telling you which file to download.
+The contract version should match your panel version at least in the first two numbers. The server adapts to the installed contract (routes, parameters and the tool list come from it) and checks the panel version on connect: if it differs, you get a warning in the chat telling you which build to use (extension file or contract version).
 
 ## How it fits together
 
@@ -64,43 +64,24 @@ flowchart LR
 ## Documentation
 
 <details>
-<summary><b>📦 Installation — Claude Desktop extension, from source, Docker</b></summary>
+<summary><b>📦 Installation — from source, Docker</b></summary>
 
 ### Installation
-#### Option 1 — Claude Desktop extension (easiest)
 
-1. Check your panel version — it is shown at the bottom of the Remnawave panel (e.g. `3.4.5`).
-   Open the [latest release](https://github.com/3APA3A-3AHO3A/remnawave-mcp/releases/latest) and download the matching file:
+Install the server once on the computer (or server) where your AI client runs, then point the client to it — see [Connecting a client](#connecting-a-client).
 
-   | Panel | File |
-   |---|---|
-   | 3.4.x | `remnawave-3.4.mcpb` |
-   | 3.3.x | `remnawave-3.3.mcpb` |
-   | 3.2.x | `remnawave-3.2.mcpb` |
-   | 3.1.x | `remnawave-3.1.mcpb` |
-   | 3.0.x | `remnawave-3.0.mcpb` |
+> Using **Claude Desktop**? You can skip this — it has a one-click extension, see “Claude Desktop” in [Connecting a client](#connecting-a-client).
 
-   Picked the wrong one? The server compares versions and tells you in the chat which file you need.
-2. Double-click the file (or drag it into **Claude → Settings → Extensions**).
-3. Click **Install** and fill in the **panel URL** and **API token** ([how to create one](#api-token)). Other fields can stay empty.
-4. Done — ask in the chat: "Give me a panel summary".
+#### Option 1 — from source (Node.js)
 
-Only Claude Desktop is needed — it ships its own Node.js. The token is stored in the Windows/macOS keychain, not as plain text. To update (new remnawave-mcp release or new panel version), download the matching `.mcpb` and open it the same way.
-
-> An extension connects **one** panel. For several panels and for other clients (Cursor, VS Code, Windsurf…) use option 2 or 3.
-
-#### Option 2 — from source (any MCP client)
-
-Requires [Node.js](https://nodejs.org) 22+ and Git.
-
-Windows:
+Requires [Node.js](https://nodejs.org) 22+ and Git. Windows:
 
 ```powershell
 winget install OpenJS.NodeJS.LTS
 winget install Git.Git
 ```
 
-Restart PowerShell after installing, then:
+Restart PowerShell, then build the server:
 
 ```powershell
 cd C:\Tools
@@ -111,41 +92,39 @@ npm run build
 npm run list-tools
 ```
 
-The last line should look like `79 API tools + 7 extra (contract 3.4.5)`. Then [connect your client](#connecting-a-client).
+The last line should look like `79 API tools + 7 extra (contract 3.4.5)`. The server is the file `C:\Tools\remnawave-mcp\dist\index.js` — you will need its path in the client settings.
 
-macOS / Linux: same commands, any path.
+macOS / Linux: same commands, any path (e.g. `~/remnawave-mcp`).
 
-#### Option 3 — Docker on the panel server (Claude Code)
+Panel is not 3.4.x? Install the contract for your version and rebuild:
 
-No Node.js needed — just Docker. Most convenient on the panel server: Docker is already there (Remnawave itself runs in Docker). The example below is for Claude Code; for other clients see [Docker in any client](#connecting-a-client).
-
-```bash
-claude mcp add remnawave --scope user \
-  -e REMNAWAVE_BASE_URL=https://panel.example.com \
-  -e REMNAWAVE_API_TOKEN=YOUR_TOKEN \
-  -- docker run -i --rm -e REMNAWAVE_BASE_URL -e REMNAWAVE_API_TOKEN ghcr.io/3apa3a-3aho3a/remnawave-mcp:3.4
+```powershell
+npm i @remnawave/backend-contract@<panel_version> --save-exact
+npm run build
 ```
 
-- `:3.4` — image for panel 3.4.x; there are also `:3.3`, `:3.2`, `:3.1`, `:3.0` and `:latest` (current stable). amd64 and arm64.
-- `-e REMNAWAVE_API_TOKEN` without a value passes the token from the environment, so it doesn't show up in the process list (`ps`).
-- Update: `docker pull ghcr.io/3apa3a-3aho3a/remnawave-mcp:3.4`.
-- Check: `claude mcp list` → `✓ Connected`.
+#### Option 2 — Docker
 
-**Straight to the panel container**, bypassing nginx / Cloudflare and the internet — attach the MCP to the panel's Docker network:
+No Node.js needed — just Docker. Most convenient on the panel server: Docker is already there (Remnawave itself runs in Docker).
+
+```bash
+docker pull ghcr.io/3apa3a-3aho3a/remnawave-mcp:3.4
+```
+
+- `:3.4` — image for panel 3.4.x; there are also `:3.3`, `:3.2`, `:3.1`, `:3.0` and `:latest` (current stable). amd64 and arm64, runs as non-root.
+- In the client settings use `docker run` instead of `node` and a file path — ready blocks are in [Connecting a client](#connecting-a-client).
+- `-e REMNAWAVE_API_TOKEN` without a value passes the token from the environment, so it doesn't show up in the process list (`ps`).
+
+**Straight to the panel container**, bypassing nginx / Cloudflare and the internet — attach the MCP container to the panel's Docker network:
 
 ```bash
 docker network ls                      # the default install uses remnawave-network
 docker ps --format '{{.Names}}'        # the panel container is usually remnawave
-
-claude mcp add remnawave --scope user \
-  -e REMNAWAVE_BASE_URL=http://remnawave:3000 \
-  -e REMNAWAVE_API_TOKEN=YOUR_TOKEN \
-  -- docker run -i --rm --network remnawave-network -e REMNAWAVE_BASE_URL -e REMNAWAVE_API_TOKEN ghcr.io/3apa3a-3aho3a/remnawave-mcp:3.4
 ```
 
-With an `http://…` URL the server adds the headers a reverse proxy normally sets (`X-Forwarded-Proto`, `X-Forwarded-For`). If the panel still returns an error, use the external `https://` URL from the first example.
+and use the URL `http://remnawave:3000` and `docker run -i --rm --network remnawave-network …` in the client settings. With an `http://…` URL the server adds the headers a reverse proxy normally sets (`X-Forwarded-Proto`, `X-Forwarded-For`). If the panel still returns an error, use the external `https://` URL.
 
-> ⚠ **Security.** The MCP gives Claude convenient tools and hides secrets, but it does **not** sandbox Claude Code: with shell access to the server it can run any command. Run Claude Code on a production server **not as root**, don't enable "allow everything", and give the panel token `read` scopes only.
+> ⚠ **Security on a server.** The MCP gives the AI convenient tools and hides secrets, but it does **not** sandbox console agents (Claude Code, Codex, Gemini CLI, etc.): with shell access to the server an agent can run any command. Run such agents on a production server **as non-root**, don't enable “allow everything”, and give the panel token `read` scopes only.
 
 </details>
 
@@ -169,23 +148,44 @@ Do not grant `write`, `*`, api-tokens, passkeys, auth or keygen.
 
 ### Connecting a client
 
-It is the same server for every client — only the place for the settings differs. The examples use `C:\Tools\remnawave-mcp\dist\index.js` (after [building from source](#option-2--from-source-any-mcp-client)) — replace it with your path; on macOS / Linux e.g. `/home/user/remnawave-mcp/dist/index.js`. Backslashes are doubled in JSON: `\\`.
+Every client needs the same thing: the command that starts the server and two variables — `REMNAWAVE_BASE_URL` (panel URL) and `REMNAWAVE_API_TOKEN` ([token](#api-token)). Only the place to put them differs.
 
-**Docker instead of Node.js** — in any client replace `command` and `args`:
+The examples use a server built from source in `C:\Tools\remnawave-mcp` (backslashes are doubled in JSON: `\\`). On macOS / Linux use your path, e.g. `/home/user/remnawave-mcp/dist/index.js`.
+
+**Via Docker** — in any example replace `command` and `args`:
 
 ```json
 "command": "docker",
 "args": ["run", "-i", "--rm", "-e", "REMNAWAVE_BASE_URL", "-e", "REMNAWAVE_API_TOKEN", "ghcr.io/3apa3a-3aho3a/remnawave-mcp:3.4"],
 ```
 
+**Several panels** — add several blocks with different names (`remnawave-main`, `remnawave-2`, …), each with its own URL and token.
+
 Open your client:
 
 <details>
 <summary><b>Claude Desktop</b></summary>
 
-Easiest is the [extension](#option-1--claude-desktop-extension-easiest). Manually (several panels):
+**One-click extension** (easiest, no Node.js needed — Claude Desktop ships its own):
 
-**Claude → Settings → Developer → Edit Config.** Fully quit Claude (tray → Quit), then add this right after the first `{` in `claude_desktop_config.json`:
+1. Check your panel version — it is shown at the bottom of the Remnawave panel (e.g. `3.4.5`). Open the [latest release](https://github.com/3APA3A-3AHO3A/remnawave-mcp/releases/latest) and download the matching file:
+
+| Panel | File |
+|---|---|
+| 3.4.x | `remnawave-3.4.mcpb` |
+| 3.3.x | `remnawave-3.3.mcpb` |
+| 3.2.x | `remnawave-3.2.mcpb` |
+| 3.1.x | `remnawave-3.1.mcpb` |
+| 3.0.x | `remnawave-3.0.mcpb` |
+
+   Picked the wrong one? The server compares versions and tells you in the chat which file you need.
+2. Double-click the file (or drag it into **Claude → Settings → Extensions**).
+3. Click **Install** and fill in the **panel URL** and **API token**. Other fields can stay empty.
+4. Done — ask in the chat: "Give me a panel summary".
+
+The token is stored in the Windows/macOS keychain, not as plain text. To update, download the new `.mcpb` and open it the same way. An extension connects **one** panel; for several, set it up manually as below.
+
+**Manually** (server [from source](#option-1--from-source-nodejs) or Docker): **Claude → Settings → Developer → Edit Config**. Fully quit Claude (tray → Quit), then add this right after the first `{` in `claude_desktop_config.json`:
 
 ```json
   "mcpServers": {
@@ -200,27 +200,30 @@ Easiest is the [extension](#option-1--claude-desktop-extension-easiest). Manuall
   },
 ```
 
-- Backslashes in Windows paths must be doubled: `\\`.
-- Keep the trailing comma if the file has other settings.
-- Several panels → several blocks with different names (`remnawave-main`, `remnawave-2`, …).
-
-Start Claude. In **Settings → Developer** the server should be **running**. Try: "How many users are online in the panel?"
-
-Full example: [`examples/claude_desktop_config.example.json`](examples/claude_desktop_config.example.json).
+Keep the trailing comma if the file has other settings. Start Claude — in **Settings → Developer** the server should be **running**. Full example: [`examples/claude_desktop_config.example.json`](examples/claude_desktop_config.example.json).
 
 </details>
 
 <details>
 <summary><b>Claude Code</b></summary>
 
-After the option 2 steps (clone and build) register the server with one command:
+One command:
 
 ```bash
 claude mcp add remnawave --scope user -e REMNAWAVE_BASE_URL=https://panel.example.com -e REMNAWAVE_API_TOKEN=YOUR_TOKEN -- node /path/to/remnawave-mcp/dist/index.js
 ```
 
+Via Docker (e.g. Claude Code right on the panel server):
+
+```bash
+claude mcp add remnawave --scope user \
+  -e REMNAWAVE_BASE_URL=https://panel.example.com \
+  -e REMNAWAVE_API_TOKEN=YOUR_TOKEN \
+  -- docker run -i --rm -e REMNAWAVE_BASE_URL -e REMNAWAVE_API_TOKEN ghcr.io/3apa3a-3aho3a/remnawave-mcp:3.4
+```
+
 - `--scope user` — available in every project.
-- `--scope local` — only in the current project. Handy for **different panels in different projects**: run `claude mcp add` in each project with its own URL and token. The settings live in your personal Claude Code config, not in the repository, so the token can't be committed by accident.
+- `--scope local` — only in the current project. Handy for **different panels in different projects**: run `claude mcp add` in each project with its own URL and token. The settings live in your personal Claude Code config, not in the repository.
 - Avoid `--scope project`: it writes the server with its token into `.mcp.json`, which usually ends up in git.
 - Check: `claude mcp list` — the server should be `✓ Connected`.
 
@@ -440,7 +443,7 @@ REMNAWAVE_API_TOKEN = "YOUR_TOKEN"
 
 ### What to ask
 
-Ready templates (the **+** menu in Claude Desktop, “/” commands in VS Code; in clients without templates just type): **Panel summary**, **Client review**, **Sharing audit**, **Node check**.
+Ready templates are available in clients that support MCP prompts: **Panel summary**, **Client review**, **Sharing audit**, **Node check**. Elsewhere just type.
 
 Or just ask:
 
@@ -492,17 +495,29 @@ Also:
 
 ### Troubleshooting
 
+**First check the server without a client** — in the server folder:
+
+```powershell
+$env:REMNAWAVE_BASE_URL="https://panel.example.com"; $env:REMNAWAVE_API_TOKEN="YOUR_TOKEN"; node dist/index.js
+```
+
+A line like `remnawave-mcp 1.3.1: 86 tools, read-only, privacy strict, https://panel.example.com` means the server starts (it then waits for a client — stop it with `Ctrl+C`). An error instead — look it up in the table.
+
 | Symptom | Fix |
 |---|---|
-| Claude Desktop: **failed** in Settings → Developer | Check the config JSON (commas, braces, `\\` in the path); run `npm run build` |
+| The client shows the server with an error / red status | Check the settings block: commas, braces, `\\` in Windows paths; the path to `dist/index.js` exists (`npm run build`) |
 | `Remnawave API 401` | Token expired or deleted — create a new one |
 | `Remnawave API 403` | Token lacks `read` on a section — recreate it with the right scopes |
 | `fetch failed` / `ENOTFOUND` / timeout | Panel unreachable or wrong `REMNAWAVE_BASE_URL` |
-| Tools don't show up | Fully restart Claude (tray → Quit) |
+| Tools don't show up | Fully restart the client (Claude Desktop — tray → Quit) |
 
-Logs (Windows): `%APPDATA%\Claude\logs\mcp-server-<name>.log`, macOS: `~/Library/Logs/Claude/`.
+**Server logs** are shown by the client itself — usually in its MCP settings or output panel. Claude Desktop writes them to files: Windows `%APPDATA%\Claude\logs\mcp-server-<name>.log`, macOS `~/Library/Logs/Claude/`.
 
 ### Updating
+
+- **Claude Desktop extension** — download the new `.mcpb` from the [latest release](https://github.com/3APA3A-3AHO3A/remnawave-mcp/releases/latest) and open it.
+- **Docker** — `docker pull ghcr.io/3apa3a-3aho3a/remnawave-mcp:3.4`.
+- **From source:**
 
 ```powershell
 cd C:\Tools\remnawave-mcp
@@ -511,14 +526,7 @@ npm ci
 npm run build
 ```
 
-Panel updated but this repo not yet — install the contract for your version:
-
-```powershell
-npm i @remnawave/backend-contract@<panel_version> --save-exact
-npm run build
-```
-
-Fully restart Claude after any update.
+Restart the client after updating.
 
 Once a day GitHub Actions compares the latest **stable** Remnawave panel release with the contract version in the project and, if a new one is out, opens a Pull Request with the updated and built project and runs the regular CI checks on it. Intermediate contract builds between releases are skipped.
 
