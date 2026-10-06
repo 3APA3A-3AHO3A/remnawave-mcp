@@ -1,6 +1,6 @@
 {
   "name": "remnawave-mcp",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "description": "MCP-сервер для панели Remnawave 3.x (Claude Desktop, Cursor и др.). Инструменты генерируются из @remnawave/backend-contract, по умолчанию только чтение.",
   "type": "module",
   "main": "dist/index.js",

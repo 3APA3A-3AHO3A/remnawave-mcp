@@ -26,3 +26,14 @@ test('page size is capped', () => {
     assert.deepEqual(capPageSize({ size: 50 }, 200), { size: 50 });
     assert.deepEqual(capPageSize({}, 200), {});
 });
+
+test('cooldown does not keep a failed or timed-out job: the next call tries again', async () => {
+    const c = new Cooldown(30);
+    let calls = 0;
+    await c.run('node', async () => (++calls, { timeout: true }));
+    await c.run('node', async () => (++calls, { isFailed: true }));
+    const ok = await c.run('node', async () => (++calls, { isCompleted: true }));
+    assert.equal(calls, 3);
+    assert.equal(ok.isCompleted, true);
+    assert.equal((await c.run('node', async () => ++calls)).cached, true);
+});

@@ -37,13 +37,17 @@ function mockClient(log, panelVersion = '3.4.4') {
             if (path === '/api/hwid/devices/top-users') return { users: [{ userId: 5, username: PII.username, devicesCount: 7 }] };
             if (path === '/api/system/stats') return { users: { statusCounts: { ACTIVE: 1 }, totalUsers: 1 }, onlineStats: { onlineNow: 1 }, memory: { used: 1, total: 2 }, cpu: { cores: 4 } };
             if (path === '/api/nodes/') return [{
-                uuid: 'n1', name: 'NL-1', countryCode: 'NL', address: '5.6.7.8', isConnected: false, isDisabled: false, usersOnline: 0,
+                uuid: 'n1', name: 'NL-1', countryCode: 'NL', address: '5.6.7.8', proxyUrl: `socks5://u:${SECRETS.proxyPass}@10.0.0.1:1080`, isConnected: false, isDisabled: false, usersOnline: 0,
                 lastStatusMessage: 'timeout', trafficUsedBytes: 1073741824, versions: null, tags: [],
                 configProfile: { activeConfigProfileUuid: 'c1', activeInbounds: [{ tag: 'VLESS', port: 443, network: 'raw', security: 'reality', type: 'vless' }] },
                 system: { info: { cpus: 2, memoryTotal: 4 * 1073741824, hostname: 'vps-1', cpuModel: 'X'.repeat(3000), networkInterfaces: ['eth0'] }, stats: { memoryUsed: 1073741824, uptime: 86400, loadAvg: [0.1, 0.2, 0.3] } },
             }];
             if (path === '/api/system/stats/bandwidth') return { bandwidthLastTwoDays: {} };
-            if (path.startsWith('/api/connections/geocheck/n1')) return { jobId: 'j1' };
+            if (path.startsWith('/api/subscriptions')) return {
+                isFound: true, links: [SECRETS.link], ssConfLinks: {}, subscriptionUrl: SECRETS.subUrl,
+                user: { shortUuid: SECRETS.shortUuid, username: PII.username, expiresAt: '2026-10-01T00:00:00Z', userStatus: 'ACTIVE', daysLeft: 3 },
+            };
+            if (path.startsWith('/api/connections/geocheck/11111111-1111-4111-8111-111111111111')) return { jobId: 'j1' };
             if (path === '/api/connections/geocheck/j1') return { isCompleted: true, isFailed: false, result: { success: true, nodeUuid: 'n1', image: { data: 'x' }, rawReport: { ip: '5.6.7.8' } } };
             return { path };
         },
@@ -100,6 +104,8 @@ test('no leaks through any read tool response', async () => {
         ['user_report', { id: 5 }],
         ['sharing_suspects', {}],
         ['panel_overview', {}],
+        ['get_subscription_by_username', { username: PII.username }],
+        ['get_nodes', { full: true }],
     ]) {
         const { text, isError } = await call(name, args);
         assert.ok(!isError, `${name}: ${text}`);
@@ -143,11 +149,11 @@ test('geocheck: cooldown returns cached result, node IPs are not pseudonymized, 
     const { client, call, log } = await connect();
     if (!(await client.listTools()).tools.some((x) => x.name === 'geocheck_node'))
         return t.skip('GeoCheck is not in this contract version (added in Remnawave 3.4)');
-    const first = JSON.parse((await call('geocheck_node', { nodeUuid: 'n1' })).text);
+    const first = JSON.parse((await call('geocheck_node', { nodeUuid: '11111111-1111-4111-8111-111111111111' })).text);
     assert.equal(first.result.image, '[svg omitted]');
     assert.equal(first.result.rawReport.ip, '5.6.7.8');
     const starts = log.filter((l) => l.method === 'POST').length;
-    const second = JSON.parse((await call('geocheck_node', { nodeUuid: 'n1' })).text);
+    const second = JSON.parse((await call('geocheck_node', { nodeUuid: '11111111-1111-4111-8111-111111111111' })).text);
     assert.equal(second.cached, true);
     assert.equal(log.filter((l) => l.method === 'POST').length, starts);
 });
@@ -174,17 +180,17 @@ test('same panel version: no warning', async () => {
     assert.ok(!text.includes('Version mismatch'));
 });
 
-test('older panel: warning points to the right build', async () => {
+test('older panel (manual install): warning gives the npm command for that version', async () => {
     const { call } = await connect(undefined, '3.2.3');
     const { text } = await call('get_nodes', {});
     assert.match(text, /^⚠ Version mismatch: the panel is 3\.2\.3/);
-    assert.match(text, /remnawave-3\.2\.mcpb/);
+    assert.match(text, /npm i @remnawave\/backend-contract@3\.2\.3 --save-exact/);
 });
 
 test('newer panel: warning suggests updating', async () => {
     const { call } = await connect(undefined, '9.1.0');
     const { text } = await call('get_nodes', {});
-    assert.match(text, /Update remnawave-mcp/);
+    assert.match(text, /Update remnawave-mcp in the server folder: git pull/);
 });
 
 test('get_nodes: compact by default, raw with full: true', async () => {
@@ -207,4 +213,46 @@ test('write tools carry warnings only in write mode', async () => {
     assert.match(d('bulk_all_extend_expiration_date'), /ALL users/);
     assert.match(d('delete_user'), /Irreversible/);
     assert.match(d('update_user'), /confirm with the user/);
+});
+
+test('path traversal through tool arguments is refused and never reaches the panel', async () => {
+    const { call, log } = await connect();
+    for (const [name, args] of [
+        ['find_user', { id: '../tokens' }],
+        ['find_user', { username: '..' }],
+        ['geocheck_node', { nodeUuid: '../../nodes/actions/restart-all?' }],
+        ['node_connections', { nodeUuid: '../../nodes/actions/restart-all?' }],
+        ['user_connections', { userId: '../../users/bulk/revoke-subscription?' }],
+        ['user_report', { id: '../../tokens' }],
+    ]) {
+        const before = log.length;
+        const r = await call(name, args);
+        assert.ok(r.isError, `${name} ${JSON.stringify(args)} should fail: ${r.text}`);
+        assert.ok(log.slice(before).every((l) => !/tokens|actions|bulk/.test(l.path)), JSON.stringify(log.slice(before)));
+    }
+    assert.ok(!log.some((l) => l.method === 'POST'));
+});
+
+test('unknown arguments are refused instead of being passed to the panel', async () => {
+    const { call, log } = await connect();
+    const r = await call('get_users', { size: 1, bogus: 'x' });
+    assert.ok(r.isError);
+    assert.match(r.text, /bogus: unknown argument/);
+    assert.ok(!log.some((l) => l.path === '/api/users/'));
+    assert.ok(!(await call('get_nodes', { full: true })).isError);
+});
+
+test('HTTP client refuses "." / ".." path segments (last line of defence)', async () => {
+    const { RemnawaveClient } = await import('../dist/client.js');
+    const calls = [];
+    const orig = globalThis.fetch;
+    globalThis.fetch = async (url) => (calls.push(String(url)), new Response('{"response":{}}'));
+    try {
+        const c = new RemnawaveClient({ baseUrl: 'http://mock', headers: {}, timeoutMs: 0 });
+        for (const p of ['/api/users/../tokens', '/api/users/%2e%2e/tokens', '/api/users/.']) await assert.rejects(c.request('GET', p), /Refusing/);
+        await c.request('GET', '/api/users/5');
+        assert.deepEqual(calls, ['http://mock/api/users/5']);
+    } finally {
+        globalThis.fetch = orig;
+    }
 });

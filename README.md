@@ -7,7 +7,7 @@
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/3APA3A-3AHO3A/remnawave-mcp/ci.yml?branch=main&label=CI"></a>
   <a href="https://github.com/remnawave"><img alt="Remnawave" src="https://img.shields.io/badge/Remnawave-3.0%20%E2%80%93%203.4.5-0e8a9e"></a>
   <a href="https://modelcontextprotocol.io"><img alt="MCP" src="https://img.shields.io/badge/MCP-Claude%20%C2%B7%20Cursor%20%C2%B7%20VS%20Code%20%C2%B7%20any%20client-8957e5"></a>
-  <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/actions/workflows/ci.yml"><img alt="tests" src="https://img.shields.io/badge/tests-42%20passed-3fb950"></a>
+  <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/actions/workflows/ci.yml"><img alt="tests" src="https://img.shields.io/badge/tests-57%20passed-3fb950"></a>
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/pkgs/container/remnawave-mcp"><img alt="docker" src="https://img.shields.io/badge/docker-ghcr.io%20%C2%B7%20amd64%20%7C%20arm64-1f6feb"></a>
   <a href="LICENSE"><img alt="license" src="https://img.shields.io/github/license/3APA3A-3AHO3A/remnawave-mcp?color=6e7681"></a>
 </p>
@@ -424,17 +424,18 @@ REMNAWAVE_API_TOKEN = "ВАШ_ТОКЕН"
 | `REMNAWAVE_READONLY` | нет | `true` по умолчанию. `false` — открыть команды записи (нужен и токен с `write`) |
 | `REMNAWAVE_PRIVACY` | нет | `strict` по умолчанию, `basic` или `off` — см. [Приватность](#приватность) |
 | `REMNAWAVE_PRIVACY_SALT` | нет | Любая длинная строка — псевдонимы не меняются после перезапуска |
+| `REMNAWAVE_SHOW_SECRETS` | нет | Устаревшее: `true` — то же, что `REMNAWAVE_PRIVACY=off` (фильтр выключен, открыты команды с ключами). Используйте `REMNAWAVE_PRIVACY` |
 | `REMNAWAVE_API_KEY` | нет | Заголовок `X-Api-Key` — панель за Caddy с секретным путём |
 | `REMNAWAVE_HEADERS` | нет | Дополнительные заголовки к каждому запросу, JSON: `{"X-Name": "value"}` |
 | `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET` | нет | Панель за Cloudflare Access |
 | `REMNAWAVE_TOOLS_EXCLUDE` | нет | Скрыть инструменты (через запятую) |
 | `REMNAWAVE_TOOLS_INCLUDE` | нет | Оставить только эти инструменты |
-| `REMNAWAVE_MAX_RESPONSE_CHARS` | нет | Максимальная длина ответа, по умолчанию 60000. Длинные списки сокращаются с пометкой «показано N из M» |
+| `REMNAWAVE_MAX_RESPONSE_CHARS` | нет | Максимальная длина ответа, по умолчанию 60000. Длинные списки сокращаются с пометкой «показано N из M». 0 — без ограничения |
 | `REMNAWAVE_COMPACT` | нет | `true` по умолчанию — компактные ответы без пустых полей и дублей. `false` — как отдаёт панель |
-| `REMNAWAVE_MAX_PAGE_SIZE` | нет | Потолок размера списков за один запрос, по умолчанию 200 (0 — без ограничения) |
+| `REMNAWAVE_MAX_PAGE_SIZE` | нет | Потолок размера списков за один запрос, по умолчанию 200 (0 — без ограничения). Исключение — `sharing_suspects`: он по назначению читает до 1000 последних запросов подписок (параметр `records`) |
 | `REMNAWAVE_GEOCHECK_COOLDOWN_MIN` | нет | Не чаще одного GeoCheck на ноду раз в N минут, по умолчанию 30 (0 — без ограничения) |
 | `REMNAWAVE_CONNECTIONS_COOLDOWN_MIN` | нет | То же для списков подключений, по умолчанию 2 |
-| `REMNAWAVE_TIMEOUT_MS` | нет | Таймаут запроса, по умолчанию 30000 |
+| `REMNAWAVE_TIMEOUT_MS` | нет | Таймаут запроса, по умолчанию 30000 (0 — без таймаута) |
 
 </details>
 
@@ -470,11 +471,11 @@ GeoCheck и запросы подключений выполняются на н
 
 | Что | `strict` (по умолч.) | `basic` | `off` |
 |---|---|---|---|
-| Приватные ключи и shortId(s) Reality, UUID и `auth` каскадных outbound'ов в сниппетах, SECRET_KEY, пароли, API-ключи, тексты ошибок | скрыто | скрыто | видно |
+| Приватные ключи и shortId(s) Reality, UUID и `auth` каскадных outbound'ов в сниппетах, SECRET_KEY, пароли (в т.ч. в адресах прокси нод), API-ключи и токены, тексты ошибок | скрыто | скрыто | видно |
 | VLESS UUID, ссылки `vless://`, `ss://`…, shortUuid и URL подписки | скрыто | скрыто | видно |
 | Команды «ключи подключения» и «сырая подписка» | недоступны | недоступны | доступны |
 | username, email, Telegram ID, описание клиента | псевдоним | видно | видно |
-| IP-адреса клиентов, HWID (в т.ч. ID устройства в User-Agent), имена компьютеров клиентов (`DESKTOP-…`) | псевдоним | видно | видно |
+| IP-адреса клиентов (в т.ч. с портом и в отчётах торрент-блокера), HWID (в т.ч. ID устройства в User-Agent), имена компьютеров клиентов (`DESKTOP-…`) | псевдоним | видно | видно |
 | ID пользователя в панели, статус, трафик, сроки, ноды, статистика | видно | видно | видно |
 
 **Как работают псевдонимы.** Вместо `ivan_petrov` ИИ видит `user~dca596`, вместо IP — `ip~f055f3`. Одинаковые значения дают одинаковые псевдонимы, поэтому ИИ всё равно заметит, что «у двух клиентов один IP» или «это тот же человек», но самих данных не узнает. Псевдоним можно передать обратно в команду — сервер подставит настоящее значение локально.
@@ -551,10 +552,13 @@ npm run build
 
 ```
 src/
-  index.ts     — запуск MCP-сервера, выбор инструментов, вызовы
+  index.ts     — точка входа: настройки, выбор инструментов, запуск
+  server.ts    — MCP-сервер: список инструментов, проверка аргументов, вызовы, шаблоны
   registry.ts  — сборка инструментов из контракта, список запрещённых
-  server.ts    — MCP-сервер: список инструментов, вызовы, шаблоны
   extras.ts    — отчёты и удобные инструменты (panel_overview, user_report, …)
+  validate.ts  — проверка аргументов и безопасная подстановка в адрес запроса
+  views.ts     — компактный вид ответов (get_nodes и др.)
+  hints.ts     — предупреждения к командам записи
   prompts.ts   — шаблоны запросов (MCP prompts)
   redact.ts    — фильтр приватности: скрытие секретов и псевдонимы
   format.ts    — компактный вывод и сокращение длинных списков
@@ -567,7 +571,7 @@ src/
 ### Для разработчиков
 
 ```powershell
-npm test                    # 42 теста: приватность (ничего не утекает), отчёты, ограничения, список инструментов
+npm test                    # 57 тестов: приватность (ничего не утекает), отчёты, ограничения, список инструментов
 npm run pack:mcpb           # расширение под текущую версию → build\remnawave-3.4.mcpb
 npm run pack:mcpb -- --all  # под все версии 3.x → build\remnawave-3.0.mcpb … remnawave-3.4.mcpb
 ```

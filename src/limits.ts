@@ -27,7 +27,9 @@ export class Cooldown {
             };
         }
         const data = await fn();
-        this.cache.set(key, { at: now, data });
+        // a failed or timed-out job is not a result: the next call must be able to try again
+        const r = data as { timeout?: boolean; isFailed?: boolean } | null;
+        if (!r?.timeout && !r?.isFailed) this.cache.set(key, { at: now, data });
         return data;
     }
 }

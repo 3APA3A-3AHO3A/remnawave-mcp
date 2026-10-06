@@ -49,13 +49,20 @@ jobs:
       - name: Текст из CHANGELOG
         run: |
           awk -v v="${TAG#v}" '$0 ~ "^## "v" " {f=1; next} /^## / && f {exit} f' CHANGELOG.md > notes.md
-          cat >> notes.md <<'TXT'
-
-          ---
-          **Установка в Claude Desktop:** скачайте файл под версию своей панели (версия видна внизу панели Remnawave): `remnawave-3.4.mcpb` для 3.4.x, `remnawave-3.3.mcpb` для 3.3.x и т.д. → откройте двойным щелчком (или Claude → Настройки → Расширения → перетащите файл) → укажите адрес панели и API-токен (только права `read`).
-          **Сервер с панелью (Claude Code + Docker):** `ghcr.io/<владелец>/remnawave-mcp:3.4` (и `:3.3` … `:3.0`) — см. README, раздел «Docker».
-          **Install in Claude Desktop:** download the file for your panel version (shown at the bottom of the Remnawave panel): `remnawave-3.4.mcpb` for 3.4.x, `remnawave-3.3.mcpb` for 3.3.x, etc. → double-click it (or drag it into Claude → Settings → Extensions) → enter the panel URL and an API token (read scopes only).
-          TXT
+          # версии панели и имя образа берутся из проекта, а не вписаны руками
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}"
+          T=$(node scripts/build-mcpb.mjs --print-targets)
+          STABLE=$(node -e "console.log(JSON.parse(process.argv[1]).find(t=>t.latest).minor)" "$T")
+          ALL=$(node -e "console.log(JSON.parse(process.argv[1]).map(t=>t.minor).reverse().join(', '))" "$T")
+          {
+            echo
+            echo '---'
+            echo "**Claude Desktop:** скачайте \`remnawave-$STABLE.mcpb\` (или файл под версию своей панели: $ALL) → откройте двойным щелчком → укажите адрес панели и API-токен (только права \`read\`)."
+            echo "**Любой другой MCP-клиент:** соберите из исходников или возьмите Docker-образ \`$IMAGE:$STABLE\` (теги: $ALL, latest) и вставьте блок настроек из README, раздел «Подключение к клиентам»."
+            echo
+            echo "**Claude Desktop:** download \`remnawave-$STABLE.mcpb\` (or the file for your panel version: $ALL) → double-click it → enter the panel URL and an API token (read scopes only)."
+            echo "**Any other MCP client:** build from source or use the Docker image \`$IMAGE:$STABLE\` (tags: $ALL, latest) and paste the settings block from README, “Connecting a client”."
+          } >> notes.md
 
       - name: Создать релиз или приложить файлы к существующему
         run: |

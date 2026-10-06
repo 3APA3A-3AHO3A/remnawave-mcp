@@ -1,5 +1,6 @@
 import * as contract from '@remnawave/backend-contract';
 import type { RemnawaveClient } from './client.js';
+import { seg } from './validate.js';
 
 /**
  * Convenience tools on top of the raw API:
@@ -60,11 +61,11 @@ async function settle<T extends Record<string, Promise<unknown>>>(parts: T) {
 
 async function findUsers(client: RemnawaveClient, a: Obj): Promise<Obj[]> {
     if (a.id !== undefined || a.userId !== undefined)
-        return [(await client.request('GET', `/api/users/${a.id ?? a.userId}`)) as Obj];
+        return [(await client.request('GET', `/api/users/${seg(a.id ?? a.userId)}`)) as Obj];
     if (a.username)
-        return [(await client.request('GET', `/api/users/by-username/${encodeURIComponent(String(a.username))}`)) as Obj];
+        return [(await client.request('GET', `/api/users/by-username/${seg(a.username)}`)) as Obj];
     if (a.shortUuid)
-        return [(await client.request('GET', `/api/users/by-short-uuid/${encodeURIComponent(String(a.shortUuid))}`)) as Obj];
+        return [(await client.request('GET', `/api/users/by-short-uuid/${seg(a.shortUuid)}`)) as Obj];
     const query: Obj = { size: 100 };
     if (a.telegramId) query.telegramId = String(a.telegramId);
     else if (a.email) query.email = a.email;
@@ -191,9 +192,9 @@ export const extraTools: ExtraTool[] = [
             const end = new Date();
             const start = new Date(end.getTime() - (days - 1) * 86_400_000);
             const r = await settle({
-                devices: client.request('GET', `/api/hwid/devices/${id}`),
-                usage: client.request('GET', `/api/bandwidth-stats/users/${id}`, { start: day(start), end: day(end), topNodesLimit: 10 }),
-                requests: client.request('GET', `/api/users/${id}/subscription-request-history`),
+                devices: client.request('GET', `/api/hwid/devices/${seg(id)}`),
+                usage: client.request('GET', `/api/bandwidth-stats/users/${seg(id)}`, { start: day(start), end: day(end), topNodesLimit: 10 }),
+                requests: client.request('GET', `/api/users/${seg(id)}/subscription-request-history`),
             });
             return { user: u, devices: r.devices, traffic: { days, ...(r.usage as Obj) }, recentRequests: r.requests };
         },
@@ -274,8 +275,8 @@ export const extraTools: ExtraTool[] = [
             if (a.interface) body.interface = a.interface;
             const r = (await runJob(
                 client,
-                `/api/connections/geocheck/${a.nodeUuid}`,
-                (id) => `/api/connections/geocheck/${id}`,
+                `/api/connections/geocheck/${seg(a.nodeUuid)}`,
+                (id) => `/api/connections/geocheck/${seg(id)}`,
                 body,
                 Number(a.timeoutSec ?? 60),
             )) as { result?: { image?: unknown } | null };
@@ -295,7 +296,7 @@ export const extraTools: ExtraTool[] = [
             additionalProperties: false,
         },
         run: (client, a) =>
-            runJob(client, `/api/connections/by-node/${a.nodeUuid}`, (id) => `/api/connections/by-node/${id}`, undefined, Number(a.timeoutSec ?? 60)),
+            runJob(client, `/api/connections/by-node/${seg(a.nodeUuid)}`, (id) => `/api/connections/by-node/${seg(id)}`, undefined, Number(a.timeoutSec ?? 60)),
     },
     {
         name: 'user_connections',
@@ -309,7 +310,7 @@ export const extraTools: ExtraTool[] = [
             additionalProperties: false,
         },
         run: (client, a) =>
-            runJob(client, `/api/connections/by-user/${a.userId}`, (id) => `/api/connections/by-user/${id}`, undefined, Number(a.timeoutSec ?? 60)),
+            runJob(client, `/api/connections/by-user/${seg(a.userId)}`, (id) => `/api/connections/by-user/${seg(id)}`, undefined, Number(a.timeoutSec ?? 60)),
     },
 ];
 

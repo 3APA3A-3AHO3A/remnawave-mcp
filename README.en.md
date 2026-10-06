@@ -7,7 +7,7 @@
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/3APA3A-3AHO3A/remnawave-mcp/ci.yml?branch=main&label=CI"></a>
   <a href="https://github.com/remnawave"><img alt="Remnawave" src="https://img.shields.io/badge/Remnawave-3.0%20%E2%80%93%203.4.5-0e8a9e"></a>
   <a href="https://modelcontextprotocol.io"><img alt="MCP" src="https://img.shields.io/badge/MCP-Claude%20%C2%B7%20Cursor%20%C2%B7%20VS%20Code%20%C2%B7%20any%20client-8957e5"></a>
-  <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/actions/workflows/ci.yml"><img alt="tests" src="https://img.shields.io/badge/tests-42%20passed-3fb950"></a>
+  <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/actions/workflows/ci.yml"><img alt="tests" src="https://img.shields.io/badge/tests-57%20passed-3fb950"></a>
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/pkgs/container/remnawave-mcp"><img alt="docker" src="https://img.shields.io/badge/docker-ghcr.io%20%C2%B7%20amd64%20%7C%20arm64-1f6feb"></a>
   <a href="LICENSE"><img alt="license" src="https://img.shields.io/github/license/3APA3A-3AHO3A/remnawave-mcp?color=6e7681"></a>
 </p>
@@ -424,17 +424,18 @@ REMNAWAVE_API_TOKEN = "YOUR_TOKEN"
 | `REMNAWAVE_READONLY` | no | `true` by default. `false` enables write tools (the token needs `write` too) |
 | `REMNAWAVE_PRIVACY` | no | `strict` by default, `basic` or `off` — see [Privacy](#privacy) |
 | `REMNAWAVE_PRIVACY_SALT` | no | Any long string — keeps pseudonyms stable across restarts |
+| `REMNAWAVE_SHOW_SECRETS` | no | Legacy: `true` is the same as `REMNAWAVE_PRIVACY=off` (filter off, key tools exposed). Use `REMNAWAVE_PRIVACY` |
 | `REMNAWAVE_API_KEY` | no | `X-Api-Key` header — panel behind Caddy with a secret path |
 | `REMNAWAVE_HEADERS` | no | Extra headers for every request, JSON: `{"X-Name": "value"}` |
 | `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET` | no | Panel behind Cloudflare Access |
 | `REMNAWAVE_TOOLS_EXCLUDE` | no | Hide tools (comma-separated) |
 | `REMNAWAVE_TOOLS_INCLUDE` | no | Expose only these tools |
-| `REMNAWAVE_MAX_RESPONSE_CHARS` | no | Max response length, default 60000. Long lists are shortened with a "shown N of M" note |
+| `REMNAWAVE_MAX_RESPONSE_CHARS` | no | Max response length, default 60000. Long lists are shortened with a "shown N of M" note. 0 — no limit |
 | `REMNAWAVE_COMPACT` | no | `true` by default — compact responses without empty fields and duplicates. `false` — as returned by the panel |
-| `REMNAWAVE_MAX_PAGE_SIZE` | no | Cap for list page size per request, default 200 (0 — no cap) |
+| `REMNAWAVE_MAX_PAGE_SIZE` | no | Cap for list page size per request, default 200 (0 — no cap). Exception: `sharing_suspects` reads up to 1000 latest subscription requests by design (`records`) |
 | `REMNAWAVE_GEOCHECK_COOLDOWN_MIN` | no | At most one GeoCheck per node every N minutes, default 30 (0 — no limit) |
 | `REMNAWAVE_CONNECTIONS_COOLDOWN_MIN` | no | Same for connection lists, default 2 |
-| `REMNAWAVE_TIMEOUT_MS` | no | Request timeout, default 30000 |
+| `REMNAWAVE_TIMEOUT_MS` | no | Request timeout, default 30000 (0 — no timeout) |
 
 </details>
 
@@ -470,11 +471,11 @@ Everything the server returns ends up in the chat history, so panel responses ar
 
 | Data | `strict` (default) | `basic` | `off` |
 |---|---|---|---|
-| Reality private keys & shortId(s), UUIDs and `auth` of cascade outbounds in snippets, SECRET_KEY, passwords, API keys, error texts | hidden | hidden | visible |
+| Reality private keys & shortId(s), UUIDs and `auth` of cascade outbounds in snippets, SECRET_KEY, passwords (incl. in node proxy URLs), API keys and tokens, error texts | hidden | hidden | visible |
 | VLESS UUID, `vless://`, `ss://`… links, subscription shortUuid & URL | hidden | hidden | visible |
 | "Connection keys" and "raw subscription" tools | unavailable | unavailable | available |
 | username, email, Telegram ID, client notes | pseudonym | visible | visible |
-| client IP addresses, HWID (incl. device IDs in User-Agent), client computer names (`DESKTOP-…`) | pseudonym | visible | visible |
+| client IP addresses (incl. with a port and in torrent-blocker reports), HWID (incl. device IDs in User-Agent), client computer names (`DESKTOP-…`) | pseudonym | visible | visible |
 | panel user ID, status, traffic, dates, nodes, statistics | visible | visible | visible |
 
 **Pseudonyms.** Instead of `ivan_petrov` the model sees `user~dca596`, instead of an IP — `ip~f055f3`. Equal values get equal pseudonyms, so the model can still notice "two clients share an IP" without learning it. A pseudonym can be passed back as a tool argument — the server resolves it locally.
@@ -541,10 +542,13 @@ In `@remnawave/backend-contract` every API endpoint is described as a "command":
 
 ```
 src/
-  index.ts     — MCP server, tool selection, calls
+  index.ts     — entry point: settings, tool selection, start
+  server.ts    — MCP server: tool list, argument checks, calls, prompts
   registry.ts  — tools generated from the contract, block lists
-  server.ts    — MCP server: tool list, calls, prompts
   extras.ts    — reports and convenience tools (panel_overview, user_report, …)
+  validate.ts  — argument checks and safe values in request paths
+  views.ts     — compact views of responses (get_nodes, …)
+  hints.ts     — warnings for write tools
   prompts.ts   — prompt templates (MCP prompts)
   redact.ts    — privacy filter: secrets and pseudonyms
   format.ts    — compact output and shortening of long lists
@@ -557,7 +561,7 @@ src/
 ### For developers
 
 ```bash
-npm test                    # 42 tests: privacy (nothing leaks), reports, limits, tool list
+npm test                    # 57 tests: privacy (nothing leaks), reports, limits, tool list
 npm run pack:mcpb           # extension for the current version → build/remnawave-3.4.mcpb
 npm run pack:mcpb -- --all  # for every 3.x version → build/remnawave-3.0.mcpb … remnawave-3.4.mcpb
 ```

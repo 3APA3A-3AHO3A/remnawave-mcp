@@ -52,18 +52,22 @@ export function render(data: unknown, opts: { max: number; compact: boolean }): 
     const stringify = (d: unknown) => (typeof d === 'string' ? d : JSON.stringify(d, null, opts.compact ? 0 : 1));
     let d = opts.compact ? compact(data) : data;
     let text = stringify(d);
-    if (text.length <= opts.max || typeof d !== 'object' || d === null) return cut(text, opts.max);
+    if (opts.max <= 0 || text.length <= opts.max || typeof d !== 'object' || d === null) return cut(text, opts.max);
 
     // Shorten the biggest list step by step; clone first, the caller may reuse the data.
-    d = JSON.parse(JSON.stringify(d));
+    // A top-level list (get_nodes, get_hosts) is wrapped so it can be shortened like any other list.
+    const box: { $: unknown } = { $: JSON.parse(JSON.stringify(d)) };
+    d = box.$;
     const notes: string[] = [];
     for (let i = 0; i < 40 && text.length > opts.max; i++) {
-        const f = biggestArray(d);
+        const f = biggestArray(box);
         if (!f || f.arr.length <= 1) break;
+        f.path = f.path.replace(/^\$\.\$/, '$'); // the wrapper is not part of the data
         const original = (f as Found & { total?: number }).arr.length;
         const keep = Math.max(1, Math.floor(original / 2));
         const trimmed = f.arr.slice(0, keep);
         (f.parent as Record<string | number, unknown>)[f.key] = trimmed;
+        d = box.$;
         const note = notes.findIndex((n) => n.startsWith(f.path + ':'));
         const total = note >= 0 ? Number(notes[note].split(' of ')[1]) : original;
         const line = `${f.path}: shown ${keep} of ${total}`;
@@ -78,6 +82,6 @@ export function render(data: unknown, opts: { max: number; compact: boolean }): 
 }
 
 function cut(text: string, max: number): string {
-    if (text.length <= max) return text;
+    if (max <= 0 || text.length <= max) return text;
     return text.slice(0, max) + `\n[truncated: ${text.length} chars total. Narrow the request to see the rest.]`;
 }

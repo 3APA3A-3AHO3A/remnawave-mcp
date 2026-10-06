@@ -22,3 +22,17 @@ test('long lists are shortened with a note instead of cutting JSON', () => {
     assert.equal(json.total, 1000);
     assert.ok(json.users.length > 1 && json.users.length < 1000);
 });
+
+test('a top-level list (get_nodes, get_hosts) is shortened as a whole, small inner lists are left alone', () => {
+    const data = Array.from({ length: 50 }, (_, i) => ({ uuid: `h${i}`, remark: `host ${i}`, tags: ['a', 'b'], pad: 'x'.repeat(40) }));
+    const text = render(data, { max: 1500, compact: true });
+    assert.match(text, /^\[shortened to fit: \$: shown \d+ of 50/);
+    assert.ok(!/tags: shown/.test(text), text.slice(0, 300));
+    const json = JSON.parse(text.slice(text.indexOf('\n') + 1));
+    assert.ok(Array.isArray(json) && json.length < 50 && json.every((h) => h.tags.length === 2));
+});
+
+test('max 0 means no limit', () => {
+    const data = { users: Array.from({ length: 500 }, (_, i) => ({ id: i })) };
+    assert.equal(render(data, { max: 0, compact: true }), JSON.stringify(data));
+});

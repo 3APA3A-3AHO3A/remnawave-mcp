@@ -16,6 +16,7 @@ import { prompts } from './prompts.js';
 import { VersionCheck } from './version.js';
 import { VIEWS } from './views.js';
 import { writeHint } from './hints.js';
+import { rejectUnknownArgs, validateArgs } from './validate.js';
 
 export function selectTools(all: ApiTool[], cfg: Config) {
     return all.filter(
@@ -152,11 +153,14 @@ export function createServer(opts: {
             const extra = extraByName.get(name);
             if (extra) {
                 if (extra.userData === false) filter = nodePrivacy;
-                const run = () => extra.run(client, args);
+                const checked = validateArgs(extra.inputSchema, args);
+                const run = () => extra.run(client, checked);
                 data = extra.cooldown ? await cooldowns[extra.cooldown.kind].run(extra.cooldown.key(args), run) : await run();
             } else {
                 const t = byName.get(name);
                 if (!t) throw new Error(`Unknown tool: ${name}`);
+                // only arguments the tool declares reach the panel; `full` is ours (compact views)
+                rejectUnknownArgs(t.inputSchema, args, VIEWS[name] ? ['full'] : []);
                 const { full, ...apiArgs } = args;
                 data = await callApi(client, t, VIEWS[name] ? apiArgs : args);
                 if (VIEWS[name] && full !== true) data = VIEWS[name](data);

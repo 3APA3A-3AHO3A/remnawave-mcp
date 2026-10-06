@@ -18,7 +18,8 @@ LABEL org.opencontainers.image.title="remnawave-mcp" \
       org.opencontainers.image.description="MCP server for Remnawave 3.x panels: read-only, secrets hidden, client data pseudonymized" \
       org.opencontainers.image.source="https://github.com/3APA3A-3AHO3A/remnawave-mcp" \
       org.opencontainers.image.licenses="MIT"
-ENV NODE_ENV=production
+ENV NODE_ENV=production \
+    REMNAWAVE_RUNTIME=docker
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund \

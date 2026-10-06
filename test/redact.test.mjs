@@ -88,3 +88,63 @@ test('strict: computer names in HWID device models become pseudonyms, phones sta
     assert.equal(out.devices[1].deviceModel, 'iPhone 15 Pro Max');
     assert.equal(new Privacy('basic').apply({ hwid: 'h', platform: 'Windows', deviceModel: 'DESKTOP-X' }).deviceModel, 'DESKTOP-X');
 });
+
+test('subscription responses: shortUuid and subscription URL are hidden outside user objects too', () => {
+    for (const mode of ['strict', 'basic']) {
+        const out = JSON.stringify(new Privacy(mode).apply({
+            isFound: true,
+            user: { shortUuid: SECRETS.shortUuid, username: PII.username, expiresAt: '2026-10-01', userStatus: 'ACTIVE' },
+            links: [SECRETS.link],
+            subscriptionUrl: SECRETS.subUrl,
+        }));
+        assertNoLeak(assert, out, [SECRETS.shortUuid, SECRETS.subUrl, SECRETS.vlessUuid]);
+        if (mode === 'strict') assertNoLeak(assert, out, [PII.username]);
+    }
+});
+
+test('credentials inside URLs (node proxyUrl) are hidden, host stays readable', () => {
+    const out = new Privacy('basic').apply({ proxyUrl: 'socks5://admin:S3cretPass@10.0.0.5:1080' });
+    assert.equal(out.proxyUrl, 'socks5://[hidden]@10.0.0.5:1080');
+    assert.ok(!new Privacy('strict').text('proxy socks5://admin:S3cretPass@host failed').includes('S3cretPass'));
+});
+
+test('IP with a port (torrent report source) gets the same pseudonym as the bare IP', () => {
+    const p = new Privacy('strict');
+    const out = p.apply({ report: { xrayReport: { source: `${PII.ip}:5555` }, actionReport: { ip: PII.ip } } });
+    assert.equal(out.report.xrayReport.source, `${out.report.actionReport.ip}:5555`);
+    assert.ok(!JSON.stringify(out).includes(PII.ip));
+    assert.equal(p.apply({ source: 'xray' }).source, 'xray');
+});
+
+test('IPv6 in error texts is scrubbed, times are not', () => {
+    const t = new Privacy('strict').text('client 2001:db8::7 failed at 12:30:45');
+    assert.ok(!t.includes('2001:db8::7'));
+    assert.ok(t.includes('12:30:45'));
+});
+
+test('any *Token key is a secret, counters like "tokens" are not', () => {
+    const out = new Privacy('basic').apply({ config: { botToken: 'BOT_SECRET_1', apiToken: 'API_SECRET_2', tokens: 3 } });
+    assertNoLeak(assert, JSON.stringify(out), ['BOT_SECRET_1', 'API_SECRET_2']);
+    assert.equal(out.config.tokens, 3);
+});
+
+test('pseudonym collision: two values never share a pseudonym and each is restored correctly', async () => {
+    const { createHmac } = await import('node:crypto');
+    const salt = 'collision-test';
+    const seen = new Map();
+    let pair;
+    for (let i = 0; !pair && i < 200000; i++) {
+        const v = `user${i}`;
+        const h = createHmac('sha256', Buffer.from(salt)).update(v).digest('hex').slice(0, 6);
+        if (seen.has(h)) pair = [seen.get(h), v];
+        else seen.set(h, v);
+    }
+    assert.ok(pair, 'no collision found');
+    const p = new Privacy('strict', salt);
+    const a = p.apply({ username: pair[0] }).username;
+    const b = p.apply({ username: pair[1] }).username;
+    assert.notEqual(a, b);
+    assert.equal(p.apply({ username: pair[0] }).username, a);
+    assert.equal(p.restore(a), pair[0]);
+    assert.equal(p.restore(b), pair[1]);
+});

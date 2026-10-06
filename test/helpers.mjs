@@ -14,6 +14,7 @@ export const SECRETS = {
     cascadeUuid: '926ae3c6-0000-4f0d-868a-000000000001',
     extUuid: '79bf1ae9-0000-41f0-b69a-000000000002',
     hysteriaAuth: 'HYSTERIA_AUTH_uuu',
+    proxyPass: 'PROXY_PASS_ttt',
 };
 export const PII = {
     username: 'ivan_petrov',

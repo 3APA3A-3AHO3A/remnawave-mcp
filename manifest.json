@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "remnawave-mcp",
   "display_name": "Remnawave",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "description": "Remnawave 3.x panel in Claude: users, nodes, traffic, devices, GeoCheck. Read-only, secrets and client data hidden.",
   "long_description": "Ask about your Remnawave panel in plain language: online users, offline nodes, traffic, a client's subscription and devices, suspected subscription sharing, GeoCheck.\n\n- Read-only: nothing in the panel can be changed.\n- Tools are generated from the official @remnawave/backend-contract.\n- Privacy filter on your computer: Reality keys, passwords, UUIDs and connection links are hidden; client usernames, e-mails, Telegram IDs, IPs and HWIDs are replaced with pseudonyms.\n- The API token is stored in the system keychain.",
   "author": {
@@ -40,7 +40,8 @@
         "REMNAWAVE_PRIVACY_SALT": "${user_config.privacy_salt}",
         "REMNAWAVE_API_KEY": "${user_config.api_key}",
         "CF_ACCESS_CLIENT_ID": "${user_config.cf_client_id}",
-        "CF_ACCESS_CLIENT_SECRET": "${user_config.cf_client_secret}"
+        "CF_ACCESS_CLIENT_SECRET": "${user_config.cf_client_secret}",
+        "REMNAWAVE_RUNTIME": "mcpb"
       }
     }
   },

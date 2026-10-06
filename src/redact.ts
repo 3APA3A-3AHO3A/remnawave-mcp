@@ -26,16 +26,23 @@ import { createHmac, randomBytes } from 'node:crypto';
 export type PrivacyMode = 'strict' | 'basic' | 'off';
 
 const MASK = '[hidden]';
-const SECRET_KEY_RE = /(private_?key|secret|passw(or)?d|api_?key|^token$|^vlessUuid$|^shortId$)/i;
+const SECRET_KEY_RE = /(private_?key|secret|passw(or)?d|api_?key|token$|^vlessUuid$|^shortId$)/i;
 /** Hysteria "auth" is a credential; SOCKS inbounds use the same key for the mode name (noauth / password) */
 const AUTH_MODES = new Set(['noauth', 'password']);
 /** an object with one of these keys is a proxy account (outbound settings, vnext user) — its "id" is a credential */
 const ACCOUNT_MARKERS = ['flow', 'encryption', 'alterId'];
 /** Reality short IDs are part of the handshake auth — hide them as well */
 const SECRET_LIST_KEYS = new Set(['shortIds']);
-/** IPv4 / IPv6, optionally with a CIDR mask; values like "geoip:private" in Xray rules are left alone */
-const IP_RE = /^(\d{1,3}(\.\d{1,3}){3}|[0-9a-f]{0,4}(:[0-9a-f]{0,4}){2,7})(\/\d{1,3})?$/i;
-const IP_FIELDS = new Set(['ip', 'ips', 'requestIp', 'ipAddresses']);
+/** IPv4 / IPv6, optionally with a CIDR mask or a port; values like "geoip:private" in Xray rules are left alone */
+const IPV4 = '\\d{1,3}(?:\\.\\d{1,3}){3}';
+const IPV6 = '[0-9a-f]{0,4}(?::[0-9a-f]{0,4}){2,7}';
+const IP_RE = new RegExp(`^(?:(${IPV4})(?::(\\d{1,5}))?|\\[(${IPV6})\\]:(\\d{1,5})|(${IPV6}))(\\/\\d{1,3})?$`, 'i');
+/** `source` — client address in torrent-blocker reports (Xray log), often "ip:port" */
+const IP_FIELDS = new Set(['ip', 'ips', 'requestIp', 'ipAddresses', 'source']);
+/** credentials inside any URL, e.g. a node proxy "socks5://user:pass@host:port" */
+const URL_CRED_RE = /\b([a-z][a-z0-9+.-]*:\/\/)[^\s/@:]+:[^\s/@]+@/gi;
+/** IPv6 in free text: at least two colons and either "::" or a hex letter (so times like 12:30:45 stay) */
+const IPV6_TEXT_RE = /(?<![\w:])[0-9a-f]{0,4}(?::[0-9a-f]{0,4}){2,7}(?![\w:])/gi;
 /** long device identifiers inside user agents, e.g. Happ/4.4.1/Android/17891107313301967618 */
 const UA_ID_RE = /\b[0-9a-f]{12,}\b/gi;
 const LINK_ARRAYS = new Set(['links', 'ssConfLinks']);
@@ -53,13 +60,15 @@ const PII_FIELDS: Record<string, string> = {
     ipAddresses: 'ip',
     hwid: 'hwid',
 };
-/** fields hidden in strict mode only inside user objects */
-const USER_ONLY_HIDE = new Set(['shortUuid', 'subscriptionUrl']);
+/** subscription short UUID / URL give access to the client's config → hidden wherever they appear
+ *  (user objects, subscription responses `{ user: {...}, subscriptionUrl }`, anything else) */
+const SUBSCRIPTION_KEYS = new Set(['shortUuid', 'subscriptionUrl']);
 const USER_ONLY_PSEUDO: Record<string, string> = { description: 'note' };
 
 export class Privacy {
     private salt: Buffer;
     private reverse = new Map<string, unknown>();
+    private forward = new Map<string, string>();
 
     constructor(
         public mode: PrivacyMode,
@@ -72,8 +81,17 @@ export class Privacy {
         if (value === null || value === undefined || value === '') return value;
         if (Array.isArray(value)) return value.map((v) => this.pseudo(prefix, v));
         if (typeof value === 'object') return this.apply(value); // e.g. ips: [{ ip, lastSeen }]
-        const token = `${prefix}~${createHmac('sha256', this.salt).update(String(value)).digest('hex').slice(0, 6)}`;
+        const key = `${prefix}\u0000${String(value)}`;
+        const known = this.forward.get(key);
+        if (known) return known;
+        const hash = createHmac('sha256', this.salt).update(String(value)).digest('hex');
+        // 6 hex chars are enough to read; on a rare collision with another value the new one gets a longer token,
+        // so equal pseudonyms always mean equal values and a pseudonym is always restored to the right value
+        let token = `${prefix}~${hash.slice(0, 6)}`;
+        for (let len = 10; this.reverse.has(token) && String(this.reverse.get(token)) !== String(value) && len <= 64; len += 4)
+            token = `${prefix}~${hash.slice(0, len)}`;
         this.reverse.set(token, value);
+        this.forward.set(key, token);
         return token;
     }
 
@@ -88,7 +106,14 @@ export class Privacy {
 
     /** Pseudonymize only real IP addresses (Xray rules use the same "ip" key for geoip:… lists). */
     private pseudoIp(value: unknown): unknown {
-        if (typeof value === 'string') return IP_RE.test(value) ? this.pseudo('ip', value) : value;
+        if (typeof value === 'string') {
+            const m = value.match(IP_RE);
+            if (!m) return value;
+            // keep the port / mask visible, pseudonymize only the address — so "1.2.3.4:5555" and "1.2.3.4" match
+            const host = m[1] ?? m[3] ?? m[5];
+            const port = m[2] ?? m[4];
+            return `${this.pseudo('ip', host)}${port ? `:${port}` : ''}${m[6] ?? ''}`;
+        }
         if (Array.isArray(value)) return value.map((v) => this.pseudoIp(v));
         if (value && typeof value === 'object') return this.apply(value);
         return value;
@@ -109,8 +134,7 @@ export class Privacy {
         if (key && LINK_ARRAYS.has(key) && typeof value === 'object') {
             return Array.isArray(value) ? `${MASK} (${value.length} links)` : MASK;
         }
-        // subscription short UUID / URL give access to the client's config → a credential
-        if (key && inUser && USER_ONLY_HIDE.has(key) && typeof value === 'string') return value === '' ? value : MASK;
+        if (key && SUBSCRIPTION_KEYS.has(key) && typeof value === 'string') return value === '' ? value : MASK;
         if (strict && key) {
             if (IP_FIELDS.has(key)) return this.pseudoIp(value);
             if (key in PII_FIELDS) return this.pseudo(PII_FIELDS[key], value);
@@ -119,12 +143,13 @@ export class Privacy {
             if (inUser && key in USER_ONLY_PSEUDO && typeof value === 'string')
                 return this.pseudo(USER_ONLY_PSEUDO[key], value);
         }
-        if (typeof value === 'string') return value.replace(LINK_RE, (_m, p: string) => `${p}://${MASK}`);
+        if (typeof value === 'string')
+            return value.replace(LINK_RE, (_m, p: string) => `${p}://${MASK}`).replace(URL_CRED_RE, `$1${MASK}@`);
         if (Array.isArray(value)) return value.map((v) => this.apply(v, '', inUser));
         if (typeof value === 'object') {
             const obj = value as Record<string, unknown>;
             // user object: has a subscription short UUID or traffic/expiry fields of a user
-            const isUser = inUser || ('shortUuid' in obj && ('expireAt' in obj || 'status' in obj));
+            const isUser = inUser || ('shortUuid' in obj && ['expireAt', 'expiresAt', 'status', 'userStatus'].some((k) => k in obj));
             const isAccount = typeof obj.id === 'string' && ACCOUNT_MARKERS.some((m) => m in obj);
             const out: Record<string, unknown> = {};
             for (const [k, v] of Object.entries(obj)) out[k] = isAccount && k === 'id' ? MASK : this.apply(v, k, isUser);
@@ -141,9 +166,10 @@ export class Privacy {
      */
     text(value: string): string {
         if (this.mode === 'off') return value;
-        let out = value.replace(LINK_RE, (_m, p: string) => `${p}://${MASK}`);
+        let out = value.replace(LINK_RE, (_m, p: string) => `${p}://${MASK}`).replace(URL_CRED_RE, `$1${MASK}@`);
         if (this.mode !== 'strict') return out;
         out = out.replace(/\b\d{1,3}(\.\d{1,3}){3}\b/g, (m) => String(this.pseudo('ip', m)));
+        out = out.replace(IPV6_TEXT_RE, (m) => (m.includes('::') || /[a-f]/i.test(m) ? String(this.pseudo('ip', m)) : m));
         out = out.replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, (m) => String(this.pseudo('email', m)));
         for (const [token, real] of this.reverse) {
             const r = String(real);

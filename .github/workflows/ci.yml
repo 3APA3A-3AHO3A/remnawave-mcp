@@ -44,6 +44,13 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: false
           build-args: CONTRACT_VERSION=3.3.3
+      - name: Собрать образ под старую версию панели для проверки запуска
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          build-args: CONTRACT_VERSION=3.3.3
+          tags: remnawave-mcp:ci-3.3
       - name: Собрать образ для проверки запуска
         uses: docker/build-push-action@v7
         with:
@@ -55,3 +62,5 @@ jobs:
           docker run --rm remnawave-mcp:ci --version
           docker run --rm remnawave-mcp:ci --list-tools | tail -1
           test "$(docker run --rm --entrypoint id remnawave-mcp:ci -u)" != "0"
+      - name: Образ под старую панель (3.3) запускается и строит команды из своего контракта
+        run: docker run --rm remnawave-mcp:ci-3.3 --list-tools | tail -1 | grep -q 'contract 3.3.3'
