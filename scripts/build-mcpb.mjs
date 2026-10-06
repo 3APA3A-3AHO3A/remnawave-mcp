@@ -12,7 +12,7 @@ import { join } from 'node:path';
 
 const root = process.cwd();
 const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
-const stable = pkg.dependencies['@remnawave/backend-contract']; // e.g. 3.4.4 — the current stable panel
+const stable = pkg.dependencies['@remnawave/backend-contract']; // e.g. 3.4.5 — the current stable panel
 const MIN_MAJOR_MINOR = [3, 0]; // oldest supported panel line
 const minorOf = (v) => v.split('.').slice(0, 2).join('.');
 const run = (cmd, cwd = root, quiet = false) =>

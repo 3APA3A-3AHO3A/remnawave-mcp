@@ -10,6 +10,9 @@ import { createHmac, randomBytes } from 'node:crypto';
  *
  * Credentials (always hidden unless "off"): Reality private keys, node SECRET_KEY, passwords,
  * API keys, user VLESS UUID, subscription links and anything that looks like vless:// ss:// … links.
+ * Also inside Xray configs (profiles, snippets, templates): the shortId of a Reality outbound, the user id of
+ * VLESS/VMess outbounds (settings.id, vnext[].users[].id) and the Hysteria auth string — with these and a public
+ * key anyone can connect through the cascade.
  *
  * Personal data (strict): username, email, Telegram ID, user description, IP addresses, HWID,
  * computer names in device models (DESKTOP-…) →
@@ -23,7 +26,11 @@ import { createHmac, randomBytes } from 'node:crypto';
 export type PrivacyMode = 'strict' | 'basic' | 'off';
 
 const MASK = '[hidden]';
-const SECRET_KEY_RE = /(private_?key|secret|passw(or)?d|api_?key|^token$|^vlessUuid$)/i;
+const SECRET_KEY_RE = /(private_?key|secret|passw(or)?d|api_?key|^token$|^vlessUuid$|^shortId$)/i;
+/** Hysteria "auth" is a credential; SOCKS inbounds use the same key for the mode name (noauth / password) */
+const AUTH_MODES = new Set(['noauth', 'password']);
+/** an object with one of these keys is a proxy account (outbound settings, vnext user) — its "id" is a credential */
+const ACCOUNT_MARKERS = ['flow', 'encryption', 'alterId'];
 /** Reality short IDs are part of the handshake auth — hide them as well */
 const SECRET_LIST_KEYS = new Set(['shortIds']);
 /** IPv4 / IPv6, optionally with a CIDR mask; values like "geoip:private" in Xray rules are left alone */
@@ -95,6 +102,7 @@ export class Privacy {
         if (key && SECRET_KEY_RE.test(key) && (typeof value === 'string' || typeof value === 'number')) {
             return value === '' ? value : MASK;
         }
+        if (key === 'auth' && typeof value === 'string' && value !== '' && !AUTH_MODES.has(value)) return MASK;
         if (key && SECRET_LIST_KEYS.has(key) && Array.isArray(value)) {
             return value.map((v) => (v === '' ? v : MASK));
         }
@@ -117,8 +125,9 @@ export class Privacy {
             const obj = value as Record<string, unknown>;
             // user object: has a subscription short UUID or traffic/expiry fields of a user
             const isUser = inUser || ('shortUuid' in obj && ('expireAt' in obj || 'status' in obj));
+            const isAccount = typeof obj.id === 'string' && ACCOUNT_MARKERS.some((m) => m in obj);
             const out: Record<string, unknown> = {};
-            for (const [k, v] of Object.entries(obj)) out[k] = this.apply(v, k, isUser);
+            for (const [k, v] of Object.entries(obj)) out[k] = isAccount && k === 'id' ? MASK : this.apply(v, k, isUser);
             // HWID device of a computer: deviceModel carries the computer name, e.g. "DESKTOP-QQNA3B4_x86_64"
             if (strict && typeof obj.deviceModel === 'string' && 'hwid' in obj) out.deviceModel = this.pcName(obj.deviceModel, obj.platform);
             return out;

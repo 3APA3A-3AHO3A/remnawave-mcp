@@ -19,7 +19,7 @@ MCP server for the [Remnawave](https://github.com/remnawave) **3.x** panel. It l
 
 | Panel version | Status |
 |---|---|
-| **3.4.x** | ✅ tested on production panels (3.4.4) |
+| **3.4.x** | ✅ tested on production panels (3.4.5) |
 | **3.0 – 3.3** | ✅ a separate extension file per version; for a manual install — `npm i @remnawave/backend-contract@<version> --save-exact`. Tools your version doesn't have yet (e.g. GeoCheck, added in 3.4) are simply not shown |
 | **2.8.x** | ⚠️ not officially supported: core tools build, but not tested against a live panel; some extra tools are unavailable |
 | **2.7 and older** | ❌ use [TrackLine/mcp-remnawave](https://github.com/TrackLine/mcp-remnawave) |
@@ -32,7 +32,7 @@ The contract version should match your panel version at least in the first two n
 
 ### Option 1 — Claude Desktop extension (easiest)
 
-1. Check your panel version — it is shown at the bottom of the Remnawave panel (e.g. `3.4.4`).
+1. Check your panel version — it is shown at the bottom of the Remnawave panel (e.g. `3.4.5`).
    Open the [latest release](https://github.com/3APA3A-3AHO3A/remnawave-mcp/releases/latest) and download the matching file:
 
    | Panel | File |
@@ -74,7 +74,7 @@ npm run build
 npm run list-tools
 ```
 
-The last line should look like `79 API tools + 7 extra (contract 3.4.4)`. Then [connect it to Claude Desktop](#claude-desktop).
+The last line should look like `79 API tools + 7 extra (contract 3.4.5)`. Then [connect it to Claude Desktop](#claude-desktop).
 
 macOS / Linux: same commands, any path.
 
@@ -254,7 +254,7 @@ src/
 ## For developers
 
 ```bash
-npm test                    # 40 tests: privacy (nothing leaks), reports, limits, tool list
+npm test                    # 42 tests: privacy (nothing leaks), reports, limits, tool list
 npm run pack:mcpb           # extension for the current version → build/remnawave-3.4.mcpb
 npm run pack:mcpb -- --all  # for every 3.x version → build/remnawave-3.0.mcpb … remnawave-3.4.mcpb
 ```
@@ -269,7 +269,7 @@ Everything the server returns ends up in the chat history, so panel responses ar
 
 | Data | `strict` (default) | `basic` | `off` |
 |---|---|---|---|
-| Reality private keys & shortIds, SECRET_KEY, passwords, API keys, error texts | hidden | hidden | visible |
+| Reality private keys & shortId(s), UUIDs and `auth` of cascade outbounds in snippets, SECRET_KEY, passwords, API keys, error texts | hidden | hidden | visible |
 | VLESS UUID, `vless://`, `ss://`… links, subscription shortUuid & URL | hidden | hidden | visible |
 | "Connection keys" and "raw subscription" tools | unavailable | unavailable | available |
 | username, email, Telegram ID, client notes | pseudonym | visible | visible |

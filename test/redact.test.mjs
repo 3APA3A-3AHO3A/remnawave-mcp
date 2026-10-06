@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Privacy } from '../dist/redact.js';
-import { SECRETS, PII, user, configProfile, history, assertNoLeak } from './helpers.mjs';
+import { SECRETS, PII, user, configProfile, snippets, template, history, assertNoLeak } from './helpers.mjs';
 
 const all = (o) => Object.values(o);
 
@@ -19,6 +19,20 @@ test('strict: config profiles hide keys, shortIds and passwords but keep geoip r
     assert.ok(out.includes('geoip:private') && out.includes('geoip:telegram'));
     assert.ok(out.includes('PUBLIC_OK'));
     assert.ok(out.includes('"shortIds":["","[hidden]"]'));
+});
+
+test('snippets: cascade UUIDs, shortId and Hysteria auth are hidden, routing stays readable', () => {
+    for (const mode of ['strict', 'basic']) {
+        const out = JSON.stringify(new Privacy(mode).apply(snippets()));
+        assertNoLeak(assert, out, [SECRETS.cascadeUuid, SECRETS.extUuid, SECRETS.shortId, SECRETS.hysteriaAuth, SECRETS.realityPassword]);
+        assert.ok(out.includes('"tag":"outbound-ru-1"') && out.includes('"flow":"xtls-rprx-vision"'));
+        assert.ok(out.includes('"selector":["outbound-ru"]') && out.includes('PUBLIC_OK'));
+    }
+});
+
+test('templates: SOCKS auth mode is not treated as a secret', () => {
+    const out = JSON.stringify(new Privacy('strict').apply(template()));
+    assert.ok(out.includes('"auth":"noauth"'));
 });
 
 test('strict: IPs and device IDs in user agents become pseudonyms, equal values → equal pseudonyms', () => {

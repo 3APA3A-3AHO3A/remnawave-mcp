@@ -11,6 +11,9 @@ export const SECRETS = {
     subUrl: 'https://sub.example.com/SubShortUuidQwerty',
     link: 'vless://11111111-2222-4333-8444-555555555555@1.2.3.4:443?security=reality#Node',
     secretKey: 'NODE_SECRET_KEY_vvv',
+    cascadeUuid: '926ae3c6-0000-4f0d-868a-000000000001',
+    extUuid: '79bf1ae9-0000-41f0-b69a-000000000002',
+    hysteriaAuth: 'HYSTERIA_AUTH_uuu',
 };
 export const PII = {
     username: 'ivan_petrov',
@@ -61,6 +64,42 @@ export const configProfile = () => ({
         routing: { rules: [{ ip: ['geoip:private'], outboundTag: 'BLOCK' }, { ip: ['geoip:telegram'], balancerTag: 'eu' }] },
     },
     inbounds: [{ uuid: 'i1', rawInbound: { streamSettings: { realitySettings: { privateKey: SECRETS.privateKey } } } }],
+});
+
+/** Snippets: outbounds of a node-to-node cascade carry real credentials. */
+export const snippets = () => ({
+    total: 2,
+    snippets: [
+        {
+            name: 'outbound-ru',
+            snippet: [
+                {
+                    tag: 'outbound-ru-1',
+                    protocol: 'vless',
+                    settings: { id: SECRETS.cascadeUuid, flow: 'xtls-rprx-vision', port: 443, address: '203.0.113.10', encryption: 'none' },
+                    streamSettings: { security: 'reality', realitySettings: { shortId: SECRETS.shortId, password: SECRETS.realityPassword, serverName: 'gw.example.com' } },
+                },
+                {
+                    tag: 'outbound-sh-1',
+                    protocol: 'hysteria',
+                    settings: { port: 443, address: '203.0.113.11', version: 2 },
+                    streamSettings: { hysteriaSettings: { auth: SECRETS.hysteriaAuth, version: 2 } },
+                },
+                {
+                    tag: 'ext-proxy-1',
+                    protocol: 'vless',
+                    settings: { vnext: [{ port: 443, address: '203.0.113.12', users: [{ id: SECRETS.extUuid, flow: 'xtls-rprx-vision', encryption: 'none' }] }] },
+                    streamSettings: { realitySettings: { publicKey: 'PUBLIC_OK', serverName: 'node.example.net' } },
+                },
+            ],
+        },
+        { name: 'balancer-ru', snippet: [{ tag: 'balancer-ru', selector: ['outbound-ru'], strategy: { type: 'leastLoad' } }] },
+    ],
+});
+
+/** Client template: SOCKS "auth" is a mode name, not a secret. */
+export const template = () => ({
+    templateJson: { inbounds: [{ tag: 'socks', protocol: 'socks', settings: { udp: true, auth: 'noauth' } }] },
 });
 
 export const history = () => ({
