@@ -230,7 +230,7 @@ npm run build
 
 Fully restart Claude after any update.
 
-Once a day GitHub Actions compares the latest **stable** Remnawave panel release with the contract version in the project and, if a new one is out, opens a Pull Request with the updated and built project. Intermediate contract builds between releases are skipped.
+Once a day GitHub Actions compares the latest **stable** Remnawave panel release with the contract version in the project and, if a new one is out, opens a Pull Request with the updated and built project and runs the regular CI checks on it. Intermediate contract builds between releases are skipped.
 
 ## How it works
 

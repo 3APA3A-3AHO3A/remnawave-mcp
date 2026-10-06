@@ -10,6 +10,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  actions: write   # запустить CI для ветки PR и убрать запуск, ждущий ручного одобрения
 
 jobs:
   check:
@@ -63,3 +64,20 @@ jobs:
           git push -u origin "panel-$V"
           gh pr create --title "Remnawave $V: обновить контракт" --body "Вышел стабильный релиз панели **v$V**. Контракт и zod обновлены, сборка и тесты (в т.ч. приватности) прошли. Смержите, когда обновите свои панели до $V." --label dependencies || \
           gh pr create --title "Remnawave $V: обновить контракт" --body "Вышел стабильный релиз панели **v$V**. Контракт и zod обновлены, сборка и тесты (в т.ч. приватности) прошли. Смержите, когда обновите свои панели до $V."
+
+      # PR, открытый роботом, не запускает CI сам: GitHub ставит такой запуск в ожидание ручного одобрения.
+      # Запускаем CI для ветки PR явно — галочка появится на PR как у обычных PR,
+      # а ждущий одобрения запуск удаляем, чтобы на PR не висела плашка «awaiting approval».
+      - name: Запустить проверки на PR
+        if: steps.v.outputs.update == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V=${{ steps.v.outputs.panel }}
+          gh workflow run ci.yml --ref "panel-$V"
+          for i in $(seq 1 12); do
+            ID=$(gh run list --workflow ci.yml --branch "panel-$V" --event pull_request --json databaseId,conclusion \
+                 --jq '[.[] | select(.conclusion == "action_required")][0].databaseId // empty' || true)
+            if [ -n "$ID" ]; then gh run delete "$ID" && echo "Удалён запуск $ID, ждавший одобрения"; break; fi
+            sleep 10
+          done

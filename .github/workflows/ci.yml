@@ -2,6 +2,8 @@ name: CI
 on:
   push:
   pull_request:
+  # запуск по кнопке и из «Panel release check» для ветки его PR
+  workflow_dispatch:
 jobs:
   build:
     runs-on: ubuntu-latest
