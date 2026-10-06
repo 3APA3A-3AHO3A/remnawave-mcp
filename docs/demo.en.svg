@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="200" viewBox="0 0 1120 200" font-family="-apple-system, &quot;Segoe UI&quot;, &quot;Noto Sans&quot;, Helvetica, Arial, sans-serif">
+<rect x="1" y="1" width="1118" height="198" rx="16" fill="#151b23" stroke="#30363d" stroke-width="2"/>
+<rect x="32" y="34" width="63" height="32" rx="16" fill="#1f6feb"/><text x="63.5" y="56" text-anchor="middle" font-size="16" fill="#fff">You</text>
+<text x="111" y="58" font-size="22" fill="#e6edf3">Whose subscription expires this week?</text>
+<rect x="32" y="96" width="90" height="32" rx="16" fill="#8957e5"/><text x="77.0" y="118" text-anchor="middle" font-size="16" fill="#fff">Claude</text>
+<text x="138" y="120" font-size="22" fill="#e6edf3">Just one: <tspan font-family="ui-monospace, SFMono-Regular, Consolas, Menlo, monospace" fill="#79c0ff">user~3fa2c1</tspan> — expires Oct 11 at 11:29 UTC, 42 of 100 GB used.</text>
+<text x="34" y="166" font-size="17" fill="#9198a1">↳ tools called: panel_overview, find_user · the client name is replaced with a pseudonym</text>
+</svg>

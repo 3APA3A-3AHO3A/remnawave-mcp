@@ -1,10 +1,36 @@
-# remnawave-mcp
+<p align="center">
+  <img src="docs/banner.en.svg" alt="remnawave-mcp — talk to your Remnawave VPN panel through AI" width="100%">
+</p>
 
-**English** | [Русский](README.md)
+<p align="center">
+  <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/releases/latest"><img alt="release" src="https://img.shields.io/github/v/release/3APA3A-3AHO3A/remnawave-mcp?label=release&color=1f6feb"></a>
+  <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/3APA3A-3AHO3A/remnawave-mcp/ci.yml?branch=main&label=CI"></a>
+  <a href="https://github.com/remnawave"><img alt="Remnawave" src="https://img.shields.io/badge/Remnawave-3.0%20%E2%80%93%203.4.5-0e8a9e"></a>
+  <a href="https://modelcontextprotocol.io"><img alt="MCP" src="https://img.shields.io/badge/MCP-Claude%20%C2%B7%20Cursor%20%C2%B7%20Windsurf-8957e5"></a>
+  <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/actions/workflows/ci.yml"><img alt="tests" src="https://img.shields.io/badge/tests-42%20passed-3fb950"></a>
+  <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/pkgs/container/remnawave-mcp"><img alt="docker" src="https://img.shields.io/badge/docker-ghcr.io%20%C2%B7%20amd64%20%7C%20arm64-1f6feb"></a>
+  <a href="LICENSE"><img alt="license" src="https://img.shields.io/github/license/3APA3A-3AHO3A/remnawave-mcp?color=6e7681"></a>
+</p>
 
-MCP server for the [Remnawave](https://github.com/remnawave) **3.x** panel. It lets Claude Desktop (and Cursor, Windsurf or any other MCP client) look into your panel — users, nodes, traffic, devices, connections, GeoCheck — through plain questions in the chat.
+<p align="center">
+  <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/releases/latest">⬇️ Download</a> &nbsp;·&nbsp; <a href="#documentation">📘 Docs</a> &nbsp;·&nbsp; <a href="#option-3--docker-on-the-panel-server-claude-code">🐳 Docker</a> &nbsp;·&nbsp; <a href="README.md">🇷🇺 Русский</a>
+</p>
 
-**Highlights:**
+MCP server for the [Remnawave](https://github.com/remnawave) **3.x** panel. It gives Claude Desktop, Claude Code, Cursor, Windsurf and other MCP clients access to users, nodes, traffic, devices, connections and GeoCheck — **read-only** and with a **privacy filter** on your side.
+
+> [!TIP]
+> **Quick start.** Download `remnawave-3.4.mcpb` (or the file for your panel version) from the [latest release](https://github.com/3APA3A-3AHO3A/remnawave-mcp/releases/latest) and open it in Claude Desktop — details in “Installation” below.
+
+> [!IMPORTANT]
+> **Privacy.** Panel responses are filtered on your machine before they reach the chat: keys and passwords are hidden, clients are replaced with pseudonyms like `user~3fa2c1`.
+
+## What it looks like
+
+<p align="center">
+  <img src="docs/demo.en.svg" alt="Example: a question about expiring subscriptions and Claude’s answer with a pseudonym instead of the client name" width="100%">
+</p>
+
+## Features
 
 - **Read-only by default.** Nothing in the panel changes unless you explicitly enable write tools.
 - **Always matches your panel version.** Tools are not hand-written: they are generated at startup from the official [`@remnawave/backend-contract`](https://www.npmjs.com/package/@remnawave/backend-contract) package. Panel updated → bump the package → rebuild.
@@ -26,11 +52,22 @@ MCP server for the [Remnawave](https://github.com/remnawave) **3.x** panel. It l
 
 The contract version should match your panel version at least in the first two numbers. The server adapts to the installed contract (routes, parameters and the tool list come from it) and checks the panel version on connect: if it differs, you get a warning in the chat telling you which file to download.
 
----
+## How it fits together
 
-## Installation
+```mermaid
+flowchart LR
+    A["Claude / Cursor<br/>MCP client"] -- stdio --> B["<b>remnawave-mcp</b><br/>privacy filter<br/>read-only · reports"]
+    B -- HTTPS --> C["Remnawave API<br/>REST, token"]
+    C --> D["Nodes<br/>Xray"]
+```
 
-### Option 1 — Claude Desktop extension (easiest)
+## Documentation
+
+<details>
+<summary><b>📦 Installation — extension, manual, Claude Code, Docker</b></summary>
+
+### Installation
+#### Option 1 — Claude Desktop extension (easiest)
 
 1. Check your panel version — it is shown at the bottom of the Remnawave panel (e.g. `3.4.5`).
    Open the [latest release](https://github.com/3APA3A-3AHO3A/remnawave-mcp/releases/latest) and download the matching file:
@@ -52,7 +89,7 @@ Only Claude Desktop is needed — it ships its own Node.js. The token is stored 
 
 > An extension connects **one** panel. For several panels or for Cursor / Windsurf use option 2.
 
-### Option 2 — manual (several panels, other MCP clients)
+#### Option 2 — manual (several panels, other MCP clients)
 
 Requires [Node.js](https://nodejs.org) 22+ and Git.
 
@@ -78,7 +115,7 @@ The last line should look like `79 API tools + 7 extra (contract 3.4.5)`. Then [
 
 macOS / Linux: same commands, any path.
 
-### Claude Code
+#### Claude Code
 
 After the option 2 steps (clone and build) register the server with one command:
 
@@ -91,7 +128,7 @@ claude mcp add remnawave --scope user -e REMNAWAVE_BASE_URL=https://panel.exampl
 - Avoid `--scope project`: it writes the server with its token into `.mcp.json`, which usually ends up in git.
 - Check: `claude mcp list` — the server should be `✓ Connected`.
 
-### Option 3 — Docker on the panel server (Claude Code)
+#### Option 3 — Docker on the panel server (Claude Code)
 
 If Claude Code runs on the server that hosts the panel, you don't need Node.js — Docker is already there (Remnawave itself runs in Docker).
 
@@ -123,8 +160,12 @@ With an `http://…` URL the server adds the headers a reverse proxy normally se
 
 > ⚠ **Security.** The MCP gives Claude convenient tools and hides secrets, but it does **not** sandbox Claude Code: with shell access to the server it can run any command. Run Claude Code on a production server **not as root**, don't enable "allow everything", and give the panel token `read` scopes only.
 
-## API token
+</details>
 
+<details>
+<summary><b>🔑 API token and Claude Desktop setup</b></summary>
+
+### API token
 **Panel → Settings → API tokens → Create.** Grant `read` only:
 
 users, nodes, hosts, hwid, connections, bandwidth-stats, system, subscriptions, subscription-request-history, internal-squads, external-squads, config-profiles, node-plugins (other sections on `read` are optional).
@@ -133,8 +174,7 @@ Do not grant `write`, `*`, api-tokens, passkeys, auth or keygen.
 
 > Remnawave scopes are "read/write", not GET/POST. GeoCheck, connection requests and user lookup work with `read` even though they are POST requests.
 
-## Claude Desktop
-
+### Claude Desktop
 _Option 2 only._
 
 
@@ -161,8 +201,12 @@ Start Claude. In **Settings → Developer** the server should be **running**. Tr
 
 Full example: [`examples/claude_desktop_config.example.json`](examples/claude_desktop_config.example.json).
 
-## Configuration (environment variables)
+</details>
 
+<details>
+<summary><b>⚙️ Configuration (environment variables)</b></summary>
+
+### Configuration (environment variables)
 | Variable | Required | Description |
 |---|---|---|
 | `REMNAWAVE_BASE_URL` | yes | Panel URL: `https://panel.example.com` (no `/api`) |
@@ -182,8 +226,12 @@ Full example: [`examples/claude_desktop_config.example.json`](examples/claude_de
 | `REMNAWAVE_CONNECTIONS_COOLDOWN_MIN` | no | Same for connection lists, default 2 |
 | `REMNAWAVE_TIMEOUT_MS` | no | Request timeout, default 30000 |
 
-## What to ask
+</details>
 
+<details>
+<summary><b>💬 What to ask</b></summary>
+
+### What to ask
 The **+** menu in the Claude chat has ready templates: **Panel summary**, **Client review**, **Sharing audit**, **Node check**.
 
 Or just ask:
@@ -200,71 +248,12 @@ Or just ask:
 
 GeoCheck and connection lists run on the node and cost its traffic, so a repeated request for the same node within 30 minutes (connections: 2 minutes) returns the previous result with a note instead of loading the node again.
 
-## Troubleshooting
+</details>
 
-| Symptom | Fix |
-|---|---|
-| **failed** in Settings → Developer | Check the config JSON (commas, braces, `\\` in the path); run `npm run build` |
-| `Remnawave API 401` | Token expired or deleted — create a new one |
-| `Remnawave API 403` | Token lacks `read` on a section — recreate it with the right scopes |
-| `fetch failed` / `ENOTFOUND` / timeout | Panel unreachable or wrong `REMNAWAVE_BASE_URL` |
-| Tools don't show up | Fully restart Claude (tray → Quit) |
+<details>
+<summary><b>🛡 Privacy — what is hidden in each mode</b></summary>
 
-Logs (Windows): `%APPDATA%\Claude\logs\mcp-server-<name>.log`, macOS: `~/Library/Logs/Claude/`.
-
-## Updating
-
-```powershell
-cd C:\Tools\remnawave-mcp
-git pull
-npm ci
-npm run build
-```
-
-Panel updated but this repo not yet — install the contract for your version:
-
-```powershell
-npm i @remnawave/backend-contract@<panel_version> --save-exact
-npm run build
-```
-
-Fully restart Claude after any update.
-
-Once a day GitHub Actions compares the latest **stable** Remnawave panel release with the contract version in the project and, if a new one is out, opens a Pull Request with the updated and built project and runs the regular CI checks on it. Intermediate contract builds between releases are skipped.
-
-## How it works
-
-In `@remnawave/backend-contract` every API endpoint is described as a "command": URL, method, zod schemas and a read/write mark. At startup the server walks through all commands and turns each into an MCP tool, validating arguments with the same schemas the panel uses. That is why the code barely depends on the Remnawave version.
-
-```
-src/
-  index.ts     — MCP server, tool selection, calls
-  registry.ts  — tools generated from the contract, block lists
-  server.ts    — MCP server: tool list, calls, prompts
-  extras.ts    — reports and convenience tools (panel_overview, user_report, …)
-  prompts.ts   — prompt templates for the Claude menu
-  redact.ts    — privacy filter: secrets and pseudonyms
-  format.ts    — compact output and shortening of long lists
-  limits.ts    — GeoCheck repeat limits and list size cap
-  version.ts   — panel version vs. build version check
-  client.ts    — HTTP requests to the panel
-  config.ts    — environment variables
-```
-
-## For developers
-
-```bash
-npm test                    # 42 tests: privacy (nothing leaks), reports, limits, tool list
-npm run pack:mcpb           # extension for the current version → build/remnawave-3.4.mcpb
-npm run pack:mcpb -- --all  # for every 3.x version → build/remnawave-3.0.mcpb … remnawave-3.4.mcpb
-```
-
-- **CI** on every push: build, tests, `npm audit`, extension build (downloadable from Actions → run → Artifacts).
-- **Release:** bump the version in `package.json`, add a `CHANGELOG.md` section, then either **Releases → Draft a new release** on GitHub (tag `vX.Y.Z`) or `git tag vX.Y.Z` + `git push origin vX.Y.Z`. GitHub builds, runs the tests and attaches `.mcpb` files for every 3.x version; an empty release text is filled from CHANGELOG.
-- **New panel version:** a daily workflow checks the latest stable Remnawave release and opens a PR with the updated contract.
-
-## Privacy
-
+### Privacy
 Everything the server returns ends up in the chat history, so panel responses are filtered **on your machine**, before they reach the model.
 
 | Data | `strict` (default) | `basic` | `off` |
@@ -286,6 +275,78 @@ Also:
 - With the extension the token is kept in the system keychain; with a manual install — only in your MCP client config, never in the repository.
 - Every change is checked by automated tests: if anything starts letting keys or client data through, CI turns red.
 - Use a dedicated read-only token so it can be revoked without touching bots or monitoring.
+
+</details>
+
+<details>
+<summary><b>🩺 Troubleshooting · Updating</b></summary>
+
+### Troubleshooting
+| Symptom | Fix |
+|---|---|
+| **failed** in Settings → Developer | Check the config JSON (commas, braces, `\\` in the path); run `npm run build` |
+| `Remnawave API 401` | Token expired or deleted — create a new one |
+| `Remnawave API 403` | Token lacks `read` on a section — recreate it with the right scopes |
+| `fetch failed` / `ENOTFOUND` / timeout | Panel unreachable or wrong `REMNAWAVE_BASE_URL` |
+| Tools don't show up | Fully restart Claude (tray → Quit) |
+
+Logs (Windows): `%APPDATA%\Claude\logs\mcp-server-<name>.log`, macOS: `~/Library/Logs/Claude/`.
+
+### Updating
+```powershell
+cd C:\Tools\remnawave-mcp
+git pull
+npm ci
+npm run build
+```
+
+Panel updated but this repo not yet — install the contract for your version:
+
+```powershell
+npm i @remnawave/backend-contract@<panel_version> --save-exact
+npm run build
+```
+
+Fully restart Claude after any update.
+
+Once a day GitHub Actions compares the latest **stable** Remnawave panel release with the contract version in the project and, if a new one is out, opens a Pull Request with the updated and built project and runs the regular CI checks on it. Intermediate contract builds between releases are skipped.
+
+</details>
+
+<details>
+<summary><b>🧪 How it works and for developers</b></summary>
+
+### How it works
+In `@remnawave/backend-contract` every API endpoint is described as a "command": URL, method, zod schemas and a read/write mark. At startup the server walks through all commands and turns each into an MCP tool, validating arguments with the same schemas the panel uses. That is why the code barely depends on the Remnawave version.
+
+```
+src/
+  index.ts     — MCP server, tool selection, calls
+  registry.ts  — tools generated from the contract, block lists
+  server.ts    — MCP server: tool list, calls, prompts
+  extras.ts    — reports and convenience tools (panel_overview, user_report, …)
+  prompts.ts   — prompt templates for the Claude menu
+  redact.ts    — privacy filter: secrets and pseudonyms
+  format.ts    — compact output and shortening of long lists
+  limits.ts    — GeoCheck repeat limits and list size cap
+  version.ts   — panel version vs. build version check
+  client.ts    — HTTP requests to the panel
+  config.ts    — environment variables
+```
+
+### For developers
+```bash
+npm test                    # 42 tests: privacy (nothing leaks), reports, limits, tool list
+npm run pack:mcpb           # extension for the current version → build/remnawave-3.4.mcpb
+npm run pack:mcpb -- --all  # for every 3.x version → build/remnawave-3.0.mcpb … remnawave-3.4.mcpb
+```
+
+- **CI** on every push: build, tests, `npm audit`, extension build (downloadable from Actions → run → Artifacts).
+- **Release:** bump the version in `package.json`, add a `CHANGELOG.md` section, then either **Releases → Draft a new release** on GitHub (tag `vX.Y.Z`) or `git tag vX.Y.Z` + `git push origin vX.Y.Z`. GitHub builds, runs the tests and attaches `.mcpb` files for every 3.x version; an empty release text is filled from CHANGELOG.
+- **Before a release** update the static badges at the top of both READMEs (supported Remnawave versions, number of tests) and, if the wording changes, the banner and the chat example in `docs/` (plain SVG, the text is edited like any file).
+- **New panel version:** a daily workflow checks the latest stable Remnawave release and opens a PR with the updated contract.
+
+</details>
 
 ## Credits
 
