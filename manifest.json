@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "remnawave-mcp",
   "display_name": "Remnawave",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Remnawave 3.x panels in Claude (up to 3 in one extension): users, nodes, traffic, devices, GeoCheck. Read-only, secrets and client data hidden.",
   "long_description": "Ask about your Remnawave panel in plain language — or about up to three panels at once: online users, offline nodes, traffic, a client's subscription and devices, suspected subscription sharing, GeoCheck.\n\n- Read-only: nothing in the panel can be changed.\n- Tools are generated from the official @remnawave/backend-contract.\n- Privacy filter on your computer: Reality keys, passwords, UUIDs and connection links are hidden; client usernames, e-mails, Telegram IDs, IPs and HWIDs are replaced with pseudonyms.\n- The API token is stored in the system keychain.",
   "author": {
@@ -92,94 +92,94 @@
     }
   },
   "user_config": {
+    "privacy": {
+      "type": "string",
+      "title": "Privacy / Приватность",
+      "description": "strict (recommended) · basic · off",
+      "default": "strict",
+      "required": false
+    },
+    "privacy_salt": {
+      "type": "string",
+      "title": "Pseudonym salt (optional) / Соль псевдонимов",
+      "description": "Keeps pseudonyms after a restart",
+      "sensitive": true,
+      "required": false
+    },
     "panel_name": {
       "type": "string",
       "title": "Panel 1 name / Имя панели 1",
-      "description": "Short name the assistant uses to pick the panel: latin letters, digits, - or _ (e.g. main). Needed only with several panels; default panel1.",
+      "description": "e.g. main (latin, digits, - _)",
       "required": false
     },
     "base_url": {
       "type": "string",
       "title": "Panel 1 URL / Адрес панели 1",
-      "description": "https://panel.example.com (without /api)",
+      "description": "https://panel.example.com",
       "required": true
     },
     "api_token": {
       "type": "string",
       "title": "Panel 1 API token / API-токен панели 1",
-      "description": "Panel → Settings → API tokens. Grant read scopes only. Stored in the system keychain.",
+      "description": "Read scopes only",
       "sensitive": true,
       "required": true
     },
     "panel_name_2": {
       "type": "string",
       "title": "Panel 2 name (optional) / Имя панели 2",
-      "description": "Fill the name, URL and token only to connect a second panel; leave all three empty otherwise. Default name panel2.",
+      "description": "e.g. second",
       "required": false
     },
     "base_url_2": {
       "type": "string",
       "title": "Panel 2 URL (optional) / Адрес панели 2",
-      "description": "https://panel2.example.com (without /api)",
+      "description": "https://panel2.example.com",
       "required": false
     },
     "api_token_2": {
       "type": "string",
       "title": "Panel 2 API token (optional) / API-токен панели 2",
-      "description": "Read scopes only. Stored in the system keychain.",
+      "description": "Read scopes only",
       "sensitive": true,
       "required": false
     },
     "panel_name_3": {
       "type": "string",
       "title": "Panel 3 name (optional) / Имя панели 3",
-      "description": "Fill the name, URL and token only to connect a third panel; leave all three empty otherwise. Default name panel3.",
+      "description": "e.g. third",
       "required": false
     },
     "base_url_3": {
       "type": "string",
       "title": "Panel 3 URL (optional) / Адрес панели 3",
-      "description": "https://panel3.example.com (without /api)",
+      "description": "https://panel3.example.com",
       "required": false
     },
     "api_token_3": {
       "type": "string",
       "title": "Panel 3 API token (optional) / API-токен панели 3",
-      "description": "Read scopes only. Stored in the system keychain.",
-      "sensitive": true,
-      "required": false
-    },
-    "privacy": {
-      "type": "string",
-      "title": "Privacy / Приватность",
-      "description": "strict (recommended): secrets hidden + client data as pseudonyms; basic: only secrets hidden; off: raw data",
-      "default": "strict",
-      "required": false
-    },
-    "privacy_salt": {
-      "type": "string",
-      "title": "Pseudonym salt (optional)",
-      "description": "Any long random string — keeps pseudonyms the same after restarts. Leave empty for new pseudonyms each session.",
+      "description": "Read scopes only",
       "sensitive": true,
       "required": false
     },
     "api_key": {
       "type": "string",
-      "title": "X-Api-Key, panel 1 (optional)",
-      "description": "Only if the panel is behind Caddy with a secret path and API key. For panels 2–3 behind Caddy / Cloudflare Access use the manual setup (README).",
+      "title": "Panel 1 behind Caddy: X-Api-Key (optional)",
+      "description": "Only with a secret path and API key",
       "sensitive": true,
       "required": false
     },
     "cf_client_id": {
       "type": "string",
-      "title": "Cloudflare Access Client ID, panel 1 (optional)",
-      "description": "Only if the panel is behind Cloudflare Access. For panels 2–3 behind Caddy / Cloudflare Access use the manual setup (README).",
+      "title": "Panel 1 behind Cloudflare Access: Client ID (optional)",
+      "description": "Only for Cloudflare Access",
       "required": false
     },
     "cf_client_secret": {
       "type": "string",
-      "title": "Cloudflare Access Client Secret, panel 1 (optional)",
-      "description": "Only if the panel is behind Cloudflare Access. For panels 2–3 behind Caddy / Cloudflare Access use the manual setup (README).",
+      "title": "Panel 1 behind Cloudflare Access: Client Secret (optional)",
+      "description": "Only for Cloudflare Access",
       "sensitive": true,
       "required": false
     }
