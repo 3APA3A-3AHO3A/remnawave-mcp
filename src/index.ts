@@ -28,7 +28,7 @@ async function main() {
     }
 
     const cfg = loadConfig();
-    const { server, toolCount } = createServer({
+    const { server, toolCount, panels } = createServer({
         cfg,
         tools: all,
         extras,
@@ -37,7 +37,8 @@ async function main() {
     });
     await server.connect(new StdioServerTransport());
     console.error(
-        `remnawave-mcp ${SERVER_VERSION}: ${toolCount} tools, ${cfg.readonly ? 'read-only' : 'READ-WRITE'}, privacy ${cfg.privacy}, ${cfg.baseUrl}`,
+        `remnawave-mcp ${SERVER_VERSION}: ${toolCount} tools, ${cfg.readonly ? 'read-only' : 'READ-WRITE'}, privacy ${cfg.privacy}, ` +
+            (panels.length > 1 ? `${panels.length} panels: ${cfg.panels.map((p) => `${p.name} (${p.baseUrl})`).join(', ')}` : cfg.baseUrl),
     );
 }
 

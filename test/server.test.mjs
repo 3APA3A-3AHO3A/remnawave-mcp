@@ -256,3 +256,110 @@ test('HTTP client refuses "." / ".." path segments (last line of defence)', asyn
         globalThis.fetch = orig;
     }
 });
+
+// ---- several panels ----
+async function connectMulti(versions = { main: CONTRACT, second: CONTRACT }, over = {}) {
+    const logs = {};
+    const clients = {};
+    for (const [name, v] of Object.entries(versions)) {
+        logs[name] = [];
+        clients[name] = mockClient(logs[name], v);
+    }
+    const { server } = createServer({
+        cfg: cfg(over), tools: buildRegistry(), extras: availableExtras(), serverVersion: 't', contractVersion: CONTRACT, clients,
+    });
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: 'test', version: '1' });
+    await Promise.all([server.connect(a), client.connect(b)]);
+    const call = async (name, args = {}) => {
+        const r = await client.callTool({ name, arguments: args });
+        return { text: r.content[0].text, isError: r.isError };
+    };
+    const body = (text) => JSON.parse(text.slice(text.indexOf('\n') + 1));
+    return { client, call, logs, body };
+}
+
+test('one panel: tool schemas have no "panel" argument and no list_panels', async () => {
+    const { client } = await connect();
+    const { tools } = await client.listTools();
+    assert.ok(tools.every((t) => !('panel' in (t.inputSchema.properties ?? {}))));
+    assert.ok(!tools.some((t) => t.name === 'list_panels'));
+});
+
+test('several panels: every tool requires "panel" from the list of names, list_panels is added', async () => {
+    const { client } = await connectMulti();
+    const { tools } = await client.listTools();
+    assert.ok(tools.some((t) => t.name === 'list_panels'));
+    for (const t of tools.filter((x) => x.name !== 'list_panels')) {
+        assert.deepEqual(t.inputSchema.properties.panel.enum, ['main', 'second'], t.name);
+        assert.ok(t.inputSchema.required.includes('panel'), t.name);
+    }
+});
+
+test('several panels: the request goes only to the chosen panel, the answer is labelled', async () => {
+    const { call, logs, body } = await connectMulti();
+    const r = await call('get_users', { panel: 'second', size: 5 });
+    assert.ok(!r.isError, r.text);
+    assert.match(r.text, /^\[panel: second\]\n/);
+    assert.equal(body(r.text).total, 1);
+    assert.ok(logs.second.some((l) => l.path === '/api/users/'));
+    assert.ok(!logs.main.some((l) => l.path === '/api/users/'));
+    assert.ok(!logs.second.find((l) => l.path === '/api/users/').query.panel, '"panel" must not reach the API');
+});
+
+test('several panels: missing or unknown panel is refused before any request', async () => {
+    const { call, logs } = await connectMulti();
+    const none = await call('get_nodes', {});
+    assert.ok(none.isError);
+    assert.match(none.text, /Specify the panel: panel is one of main, second/);
+    const bad = await call('get_nodes', { panel: 'nope' });
+    assert.ok(bad.isError);
+    assert.match(bad.text, /Unknown panel "nope"/);
+    assert.ok(!logs.main.some((l) => l.path === '/api/nodes/') && !logs.second.some((l) => l.path === '/api/nodes/'));
+});
+
+test('several panels: extras (panel_overview, find_user) work per panel, versions name the panel', async () => {
+    const { call, logs, body } = await connectMulti();
+    const o = body((await call('panel_overview', { panel: 'main' })).text);
+    assert.equal(o.versions.panelName, 'main');
+    const f = await call('find_user', { panel: 'second', telegramId: String(PII.telegramId) });
+    assert.ok(!f.isError, f.text);
+    assert.ok(logs.second.length > 0);
+    assertNoLeak(assert, f.text, [...ALL_SECRETS, ...ALL_PII]);
+});
+
+test('several panels: node job cooldown is per panel', async (t) => {
+    const { client, call, logs } = await connectMulti();
+    if (!(await client.listTools()).tools.some((x) => x.name === 'geocheck_node')) return t.skip('no GeoCheck in this contract');
+    const uuid = '11111111-1111-4111-8111-111111111111';
+    await call('geocheck_node', { panel: 'main', nodeUuid: uuid });
+    const other = await call('geocheck_node', { panel: 'second', nodeUuid: uuid });
+    assert.ok(!/"cached":true/.test(other.text), 'same node uuid on another panel is another node');
+    assert.equal(logs.second.filter((l) => l.method === 'POST').length, 1);
+    const again = await call('geocheck_node', { panel: 'main', nodeUuid: uuid });
+    assert.match(again.text, /"cached":true/);
+});
+
+test('several panels: version warning only for the panel with another version, list_panels shows versions', async () => {
+    const { call } = await connectMulti({ main: CONTRACT, second: '3.2.3' });
+    assert.ok(!(await call('get_nodes', { panel: 'main' })).text.includes('Version mismatch'));
+    assert.match((await call('get_nodes', { panel: 'second' })).text, /^\[panel: second\]\n⚠ Version mismatch: the panel is 3\.2\.3/);
+    assert.match((await call('get_nodes', { panel: 'second' })).text, /about panel "second" only/);
+    const list = JSON.parse((await call('list_panels')).text);
+    assert.deepEqual(list.panels.map((p) => [p.name, p.panelVersion]), [['main', CONTRACT], ['second', '3.2.3']]);
+    assert.ok(list.panels[1].warning && !list.panels[0].warning);
+});
+
+test('several panels: pseudonyms still resolve, prompts get a panel argument', async () => {
+    const { call, client, logs, body } = await connectMulti();
+    const found = body((await call('find_user', { panel: 'main', telegramId: String(PII.telegramId) })).text);
+    const r = await call('get_user_by_username', { panel: 'main', username: found.users[0].username });
+    assert.ok(!r.isError, r.text);
+    assert.ok(logs.main.some((l) => l.path === `/api/users/by-username/${PII.username}`));
+    const { prompts } = await client.listPrompts();
+    assert.ok(prompts.every((p) => p.arguments.some((a) => a.name === 'panel')));
+    const one = await client.getPrompt({ name: 'daily_summary', arguments: { panel: 'second' } });
+    assert.match(one.messages[0].content.text, /panel "second" only/);
+    const all = await client.getPrompt({ name: 'daily_summary', arguments: {} });
+    assert.match(all.messages[0].content.text, /for each panel/);
+});

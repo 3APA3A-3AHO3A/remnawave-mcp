@@ -13,7 +13,7 @@ export interface PromptDef {
 
 const LANG = 'Answer in the language the user writes in (Russian if unsure). Be brief: a short summary first, details after.';
 
-export const prompts: PromptDef[] = [
+const BASE: PromptDef[] = [
     {
         name: 'daily_summary',
         title: 'Сводка по панели / Panel summary',
@@ -57,3 +57,27 @@ export const prompts: PromptDef[] = [
             LANG,
     },
 ];
+
+/**
+ * Prompts for the configured panels. With several panels every prompt gets an optional "panel" argument:
+ * given — the check runs on that panel; empty — on every panel, results labelled by panel.
+ */
+export function buildPrompts(panels: string[] = []): PromptDef[] {
+    if (panels.length < 2) return BASE;
+    const list = panels.join(', ');
+    const arg = { name: 'panel', description: `Panel: ${list} (empty — all panels)` };
+    return BASE.map((p) => ({
+        ...p,
+        arguments: [...(p.arguments ?? []), arg],
+        text: (a) => {
+            const panel = (a.panel ?? '').trim().toLowerCase();
+            const scope = panels.includes(panel)
+                ? `Work with the panel "${panel}" only: pass panel: "${panel}" to every tool. `
+                : `Several panels are connected (${list}): do this for each panel (pass panel to every tool) and label every part of the answer with the panel name. `;
+            return scope + p.text(a);
+        },
+    }));
+}
+
+/** Prompts of a single-panel setup (kept for compatibility). */
+export const prompts: PromptDef[] = BASE;

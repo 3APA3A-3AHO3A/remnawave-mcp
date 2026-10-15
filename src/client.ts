@@ -9,8 +9,11 @@ export class ApiError extends Error {
     }
 }
 
+/** Connection settings of one panel (a Config works too: its top level describes the first panel). */
+export type ClientConfig = Pick<Config, 'baseUrl' | 'headers' | 'timeoutMs'>;
+
 export class RemnawaveClient {
-    constructor(private cfg: Config) {}
+    constructor(private cfg: ClientConfig) {}
 
     async request(method: string, path: string, query?: Record<string, unknown>, body?: unknown): Promise<unknown> {
         // Last line of defence: a "." or ".." segment (also percent-encoded) would move the request to another endpoint.

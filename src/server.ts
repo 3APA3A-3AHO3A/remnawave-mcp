@@ -12,7 +12,7 @@ import type { ExtraTool } from './extras.js';
 import { Privacy } from './redact.js';
 import { render } from './format.js';
 import { Cooldown, capPageSize } from './limits.js';
-import { prompts } from './prompts.js';
+import { buildPrompts } from './prompts.js';
 import { VersionCheck } from './version.js';
 import { VIEWS } from './views.js';
 import { writeHint } from './hints.js';
@@ -72,9 +72,14 @@ async function callApi(client: RemnawaveClient, t: ApiTool, args: Record<string,
     return client.request(t.method, path, query, body);
 }
 
-export function instructions(cfg: Config, contractVersion: string) {
+export function instructions(cfg: Config, contractVersion: string, panels: string[] = []) {
     return (
         `Remnawave panel API (contract ${contractVersion}). ` +
+        (panels.length > 1
+            ? `Several panels are connected: ${panels.join(', ')}. Every tool has a required "panel" argument — use the panel the user means; ` +
+              'if it is unclear, ask, or query each panel and label the results by panel (list_panels shows them). ' +
+              'Users, nodes, uuids and ids belong to one panel: never pass an id from one panel to another. '
+            : '') +
         (cfg.readonly ? 'READ-ONLY mode: no changes are possible. ' : 'Write tools are enabled — confirm with the user before any change. ') +
         'Start with panel_overview for general questions, user_report for one client, sharing_suspects for shared subscriptions. ' +
         'In Remnawave 3.x users are addressed by numeric userId (not uuid). ' +
@@ -90,36 +95,104 @@ export function instructions(cfg: Config, contractVersion: string) {
     );
 }
 
+interface Panel {
+    name: string;
+    client: RemnawaveClient;
+    versions: VersionCheck;
+}
+
+const LIST_PANELS = 'list_panels';
+
 export function createServer(opts: {
     cfg: Config;
     tools: ApiTool[];
     extras: ExtraTool[];
     serverVersion: string;
     contractVersion: string;
+    /** single-panel tests: client of the (only) panel */
     client?: RemnawaveClient;
+    /** multi-panel tests: client per panel name, in order */
+    clients?: Record<string, RemnawaveClient>;
 }) {
     const { cfg } = opts;
-    const client = opts.client ?? new RemnawaveClient(cfg);
+    const panelCfgs = cfg.panels?.length ? cfg.panels : [{ name: 'panel1', baseUrl: cfg.baseUrl, headers: cfg.headers }];
+    const panels: Panel[] = (
+        opts.clients
+            ? Object.entries(opts.clients).map(([name, client]) => ({ name, client }))
+            : panelCfgs.map((p, i) => ({
+                  name: p.name,
+                  client: (i === 0 && opts.client) || new RemnawaveClient({ baseUrl: p.baseUrl, headers: p.headers, timeoutMs: cfg.timeoutMs }),
+              }))
+    ).map((p) => ({ ...p, versions: new VersionCheck(p.client, opts.contractVersion, opts.serverVersion) }));
+    const names = panels.map((p) => p.name);
+    const multi = panels.length > 1;
+
+    // One filter for all panels: a pseudonym is derived from the value itself, so equal pseudonyms always
+    // mean equal values (also across panels) and a pseudonym is restored to the right value whatever panel it came from.
     const privacy = new Privacy(cfg.privacy, cfg.privacySalt);
     const nodePrivacy = new Privacy(cfg.privacy === 'strict' ? 'basic' : cfg.privacy);
     const cooldowns = { geocheck: new Cooldown(cfg.cooldown.geocheck), connections: new Cooldown(cfg.cooldown.connections) };
     const tools = selectTools(opts.tools, cfg);
-    const extras = opts.extras.filter((e) => !cfg.exclude.has(e.name) && (!cfg.include || cfg.include.has(e.name)));
-    const versions = new VersionCheck(client, opts.contractVersion, opts.serverVersion);
+    const visible = (name: string) => !cfg.exclude.has(name) && (!cfg.include || cfg.include.has(name));
+    const extras = opts.extras.filter((e) => visible(e.name));
+    const listPanels = multi && visible(LIST_PANELS);
     const byName = new Map(tools.map((t) => [t.name, t]));
     const extraByName = new Map(extras.map((e) => [e.name, e]));
+    const prompts = buildPrompts(names);
+
+    /** With several panels every tool gets a required "panel" argument limited to the configured names. */
+    const withPanel = (schema: Record<string, unknown>) =>
+        multi
+            ? {
+                  ...schema,
+                  properties: {
+                      panel: { type: 'string', enum: names, description: `Remnawave panel to query: ${names.join(', ')}` },
+                      ...((schema.properties as object) ?? {}),
+                  },
+                  required: ['panel', ...(((schema.required as string[]) ?? []).filter((r) => r !== 'panel'))],
+              }
+            : schema;
+
+    /** With several panels a contract change for one of them would break the others — say so next to the version hint. */
+    const warning = (v: { warning?: string } | undefined, p: Panel) =>
+        v?.warning && multi
+            ? `${v.warning} Note: this is about panel "${p.name}" only. The other connected panels share this build, so changing its contract version ` +
+              'would break them — keep the build that matches most panels and connect this panel through a separate server, or update the panels to the same version.'
+            : v?.warning;
+
+    function pickPanel(value: unknown): Panel {
+        if (!multi) return panels[0];
+        const name = typeof value === 'string' ? value.trim().toLowerCase() : '';
+        const p = panels.find((x) => x.name === name);
+        if (p) return p;
+        throw new Error(
+            name
+                ? `Unknown panel "${name}". Connected panels: ${names.join(', ')}.`
+                : `Specify the panel: panel is one of ${names.join(', ')}. If the user did not say which, ask or query each panel.`,
+        );
+    }
 
     const server = new Server(
         { name: 'remnawave', version: opts.serverVersion },
-        { capabilities: { tools: {}, prompts: {} }, instructions: instructions(cfg, opts.contractVersion) },
+        { capabilities: { tools: {}, prompts: {} }, instructions: instructions(cfg, opts.contractVersion, names) },
     );
 
     server.setRequestHandler(ListToolsRequestSchema, async () => ({
         tools: [
+            ...(listPanels
+                ? [
+                      {
+                          name: LIST_PANELS,
+                          description: 'Connected Remnawave panels: name and panel version. Pass the name as "panel" to the other tools.',
+                          inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+                          annotations: { readOnlyHint: true },
+                      },
+                  ]
+                : []),
             ...extras.map((e) => ({
                 name: e.name,
                 description: e.description,
-                inputSchema: e.inputSchema,
+                inputSchema: withPanel(e.inputSchema),
                 annotations: { readOnlyHint: true },
             })),
             ...tools.map((t) => ({
@@ -127,15 +200,17 @@ export function createServer(opts: {
                 description:
                     (VIEWS[t.name] ? `${t.description}\nReturns a compact view; pass full: true for the raw panel response.` : t.description) +
                     (t.kind === 'write' ? `\n${writeHint(t.name)}` : ''),
-                inputSchema: VIEWS[t.name]
-                    ? {
-                          ...t.inputSchema,
-                          properties: {
-                              ...(t.inputSchema.properties as object),
-                              full: { type: 'boolean', default: false, description: 'Return the raw panel response (large)' },
-                          },
-                      }
-                    : t.inputSchema,
+                inputSchema: withPanel(
+                    VIEWS[t.name]
+                        ? {
+                              ...t.inputSchema,
+                              properties: {
+                                  ...(t.inputSchema.properties as object),
+                                  full: { type: 'boolean', default: false, description: 'Return the raw panel response (large)' },
+                              },
+                          }
+                        : t.inputSchema,
+                ),
                 annotations: {
                     readOnlyHint: t.kind === 'read',
                     destructiveHint: t.kind === 'write' && (t.method === 'DELETE' || /delete|revoke|truncate|reset/i.test(t.name)),
@@ -146,8 +221,28 @@ export function createServer(opts: {
 
     server.setRequestHandler(CallToolRequestSchema, async (req) => {
         const name = req.params.name;
+        let panel: Panel | undefined;
+        // with several panels every answer says which panel it is about
+        const label = () => (multi && panel ? `[panel: ${panel.name}]\n` : '');
         try {
-            const args = capPageSize(privacy.restore(req.params.arguments ?? {}) as Record<string, unknown>, cfg.maxPageSize);
+            if (name === LIST_PANELS && listPanels) {
+                const list = await Promise.all(
+                    panels.map(async (p) => {
+                        const v = await p.versions.get();
+                        return { name: p.name, panelVersion: v.panel ?? 'unknown (panel unreachable or no "system" scope)', warning: warning(v, p) };
+                    }),
+                );
+                return { content: [{ type: 'text', text: render({ panels: list, mcpContract: opts.contractVersion }, { max: cfg.maxResponseChars, compact: cfg.compact }) }] };
+            }
+            const restored = privacy.restore(req.params.arguments ?? {}) as Record<string, unknown>;
+            let rest = restored;
+            if (multi) {
+                const { panel: wanted, ...others } = restored;
+                panel = pickPanel(wanted);
+                rest = others;
+            } else panel = panels[0];
+            const { client, versions } = panel;
+            const args = capPageSize(rest, cfg.maxPageSize);
             let data: unknown;
             let filter = privacy;
             const extra = extraByName.get(name);
@@ -155,7 +250,9 @@ export function createServer(opts: {
                 if (extra.userData === false) filter = nodePrivacy;
                 const checked = validateArgs(extra.inputSchema, args);
                 const run = () => extra.run(client, checked);
-                data = extra.cooldown ? await cooldowns[extra.cooldown.kind].run(extra.cooldown.key(args), run) : await run();
+                data = extra.cooldown
+                    ? await cooldowns[extra.cooldown.kind].run(`${panel.name}:${extra.cooldown.key(args)}`, run)
+                    : await run();
             } else {
                 const t = byName.get(name);
                 if (!t) throw new Error(`Unknown tool: ${name}`);
@@ -167,15 +264,19 @@ export function createServer(opts: {
             }
             const v = await versions.get();
             if (name === 'panel_overview' && data && typeof data === 'object')
-                data = { versions: { panel: v.panel, mcpContract: v.contract, mcpServer: v.server }, ...(data as object) };
+                data = {
+                    versions: { ...(multi ? { panelName: panel.name } : {}), panel: v.panel, mcpContract: v.contract, mcpServer: v.server },
+                    ...(data as object),
+                };
             let text = render(filter.apply(data), { max: cfg.maxResponseChars, compact: cfg.compact });
-            if (v.warning) text = `${v.warning}\n${text}`;
-            return { content: [{ type: 'text', text }] };
+            const w = warning(v, panel);
+            if (w) text = `${w}\n${text}`;
+            return { content: [{ type: 'text', text: label() + text }] };
         } catch (e) {
             // error texts may quote user data — they go through the privacy filter too
             const msg = e instanceof Error ? e.message : String(e);
-            const v = await versions.get().catch(() => undefined);
-            const text = (v?.warning ? `${v.warning}\n` : '') + privacy.text(msg);
+            const w = panel ? warning(await panel.versions.get().catch(() => undefined), panel) : undefined;
+            const text = label() + (w ? `${w}\n` : '') + privacy.text(msg);
             return { isError: true, content: [{ type: 'text', text }] };
         }
     });
@@ -194,5 +295,5 @@ export function createServer(opts: {
         };
     });
 
-    return { server, toolCount: tools.length + extras.length };
+    return { server, toolCount: tools.length + extras.length + (listPanels ? 1 : 0), panels: names };
 }

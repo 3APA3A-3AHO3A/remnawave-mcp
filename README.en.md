@@ -7,7 +7,7 @@
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/3APA3A-3AHO3A/remnawave-mcp/ci.yml?branch=main&label=CI"></a>
   <a href="https://github.com/remnawave"><img alt="Remnawave" src="https://img.shields.io/badge/Remnawave-3.0%20%E2%80%93%203.4.5-0e8a9e"></a>
   <a href="https://modelcontextprotocol.io"><img alt="MCP" src="https://img.shields.io/badge/MCP-Claude%20%C2%B7%20Cursor%20%C2%B7%20VS%20Code%20%C2%B7%20any%20client-8957e5"></a>
-  <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/actions/workflows/ci.yml"><img alt="tests" src="https://img.shields.io/badge/tests-57%20passed-3fb950"></a>
+  <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/actions/workflows/ci.yml"><img alt="tests" src="https://img.shields.io/badge/tests-70%20passed-3fb950"></a>
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/pkgs/container/remnawave-mcp"><img alt="docker" src="https://img.shields.io/badge/docker-ghcr.io%20%C2%B7%20amd64%20%7C%20arm64-1f6feb"></a>
   <a href="LICENSE"><img alt="license" src="https://img.shields.io/github/license/3APA3A-3AHO3A/remnawave-mcp?color=6e7681"></a>
 </p>
@@ -37,6 +37,7 @@ MCP server for the [Remnawave](https://github.com/remnawave) **3.x** panel. It g
 - **Secrets are never exposed:** panel login, passkeys, node SECRET_KEY, API tokens.
 - **A leaked chat leaks neither keys nor clients.** Reality private keys, passwords, UUIDs and connection links are hidden; client personal data (username, email, Telegram ID, IP, HWID) is replaced with pseudonyms. See [Privacy](#privacy).
 - **Ready-made reports in one call:** `panel_overview` (panel summary), `user_report` (everything about a client), `sharing_suspects` (who shares a subscription), plus `find_user`, `geocheck_node`, `node_connections`, `user_connections`.
+- **Several panels in one server.** Connect two or three panels (or more) — the assistant picks the right one by name, and every answer says which panel it came from. See [Several panels](#several-panels).
 - **Prompt templates** in clients that support MCP prompts: "Panel summary", "Client review", "Sharing audit", "Node check".
 - **Gentle on nodes and limits:** a repeated GeoCheck of the same node within 30 minutes returns the previous result; responses are compacted (2–3× fewer tokens), the node list is short by default (`full: true` for the raw one).
 - **Three ways to install:** build from source (Node.js) or a Docker image per panel version — for any client; for Claude Desktop also a one-click extension with the token kept in the system keychain.
@@ -159,7 +160,7 @@ The examples use a server built from source in `C:\Tools\remnawave-mcp` (backsla
 "args": ["run", "-i", "--rm", "-e", "REMNAWAVE_BASE_URL", "-e", "REMNAWAVE_API_TOKEN", "ghcr.io/3apa3a-3aho3a/remnawave-mcp:3.4"],
 ```
 
-**Several panels** — add several blocks with different names (`remnawave-main`, `remnawave-2`, …), each with its own URL and token.
+**Several panels** — add the variables of the second panel to the same block (`REMNAWAVE_2_BASE_URL`, `REMNAWAVE_2_API_TOKEN`, …), see [Several panels](#several-panels).
 
 Open your client:
 
@@ -180,10 +181,10 @@ Open your client:
 
    Picked the wrong one? The server compares versions and tells you in the chat which file you need.
 2. Double-click the file (or drag it into **Claude → Settings → Extensions**).
-3. Click **Install** and fill in the **panel URL** and **API token**. Other fields can stay empty.
+3. Click **Install** and fill in the **panel 1 URL** and **panel 1 API token**. Other fields can stay empty. A second and third panel go into the panel 2 and panel 3 fields (name, URL, token), see [Several panels](#several-panels).
 4. Done — ask in the chat: "Give me a panel summary".
 
-The token is stored in the Windows/macOS keychain, not as plain text. To update, download the new `.mcpb` and open it the same way. An extension connects **one** panel; for several, set it up manually as below.
+The token is stored in the Windows/macOS keychain, not as plain text. To update, download the new `.mcpb` and open it the same way. An extension connects **up to three** panels; for more than three, or a second/third panel behind Caddy or Cloudflare Access, set it up manually as below.
 
 **Manually** (server [from source](#option-1--from-source-nodejs) or Docker): **Claude → Settings → Developer → Edit Config**. Fully quit Claude (tray → Quit), then add this right after the first `{` in `claude_desktop_config.json`:
 
@@ -223,6 +224,7 @@ claude mcp add remnawave --scope user \
 ```
 
 - `--scope user` — available in every project.
+- Several panels in one server — add `-e REMNAWAVE_NAME=main -e REMNAWAVE_2_NAME=… -e REMNAWAVE_2_BASE_URL=… -e REMNAWAVE_2_API_TOKEN=…`, see [Several panels](#several-panels).
 - `--scope local` — only in the current project. Handy for **different panels in different projects**: run `claude mcp add` in each project with its own URL and token. The settings live in your personal Claude Code config, not in the repository.
 - Avoid `--scope project`: it writes the server with its token into `.mcp.json`, which usually ends up in git.
 - Check: `claude mcp list` — the server should be `✓ Connected`.
@@ -413,6 +415,44 @@ REMNAWAVE_API_TOKEN = "YOUR_TOKEN"
 </details>
 
 <details>
+<summary><b>🗂 Several panels</b></summary>
+
+### Several panels
+
+One server can work with several Remnawave panels at once. The number of tools stays the same as with one panel — each tool gets a required `panel` argument limited to the names of your panels:
+
+- the assistant picks the panel from your question ("on panel second"); if unsure, it asks or checks every panel and labels the results;
+- every answer starts with a `[panel: name]` line, and the `list_panels` tool shows the connected panels and their versions;
+- user IDs and node/host UUIDs belong to one panel — a request never goes to the wrong panel, and without `panel` it is not sent at all;
+- version check, GeoCheck repeat limit and errors are per panel; one unreachable panel does not block the others;
+- client pseudonyms are shared: an equal pseudonym means an equal value, even across panels (e.g. the same e-mail in both).
+
+With one panel nothing changes: there is no `panel` argument and the settings are the same as before.
+
+**Setup.** The first panel as usual, the others — the same variables with a number after `REMNAWAVE_`. Names are optional (default `panel1`, `panel2`, …), but clear names help the assistant:
+
+```json
+"env": {
+  "REMNAWAVE_NAME": "main",
+  "REMNAWAVE_BASE_URL": "https://panel.example.com",
+  "REMNAWAVE_API_TOKEN": "PANEL_1_TOKEN",
+  "REMNAWAVE_2_NAME": "second",
+  "REMNAWAVE_2_BASE_URL": "https://panel2.example.net",
+  "REMNAWAVE_2_API_TOKEN": "PANEL_2_TOKEN"
+}
+```
+
+A third panel — `REMNAWAVE_3_…`, and so on, no limit. If the second panel is behind Caddy or Cloudflare Access — `REMNAWAVE_2_API_KEY`, `REMNAWAVE_2_CF_ACCESS_CLIENT_ID`, `REMNAWAVE_2_CF_ACCESS_CLIENT_SECRET`, `REMNAWAVE_2_HEADERS`.
+
+- **Claude Desktop extension** — up to three panels: the panel 2 and panel 3 fields in the extension settings (**Settings → Extensions → Remnawave → Configure**). Empty fields — no panel.
+- **Docker** — pass the second panel's variables too: `"-e", "REMNAWAVE_NAME", "-e", "REMNAWAVE_2_NAME", "-e", "REMNAWAVE_2_BASE_URL", "-e", "REMNAWAVE_2_API_TOKEN"`.
+- The server is built for one contract version, so it is best to keep the panels on the same version. If one panel runs another version, the server warns about that panel. Do not change the contract version for it — the other panels would break; connect such a panel through a separate server (its own `mcpServers` block or a Docker image for its version).
+
+The old way — a separate `mcpServers` block per panel — still works, but the assistant then gets two sets of identical tools, and some clients (Cursor and others) hit their tool count limit.
+
+</details>
+
+<details>
 <summary><b>⚙️ Configuration (environment variables)</b></summary>
 
 ### Configuration (environment variables)
@@ -421,6 +461,8 @@ REMNAWAVE_API_TOKEN = "YOUR_TOKEN"
 |---|---|---|
 | `REMNAWAVE_BASE_URL` | yes | Panel URL: `https://panel.example.com` (no `/api`) |
 | `REMNAWAVE_API_TOKEN` | yes | API token |
+| `REMNAWAVE_NAME` | no | Panel name for the assistant (latin letters, digits, `-`, `_`), default `panel1`. Only matters with several panels |
+| `REMNAWAVE_2_BASE_URL`, `REMNAWAVE_2_API_TOKEN`, `REMNAWAVE_2_NAME` | no | Second panel; third — `REMNAWAVE_3_…` and so on. Per number as well: `REMNAWAVE_2_API_KEY`, `REMNAWAVE_2_HEADERS`, `REMNAWAVE_2_CF_ACCESS_CLIENT_ID`, `REMNAWAVE_2_CF_ACCESS_CLIENT_SECRET`. See [Several panels](#several-panels) |
 | `REMNAWAVE_READONLY` | no | `true` by default. `false` enables write tools (the token needs `write` too) |
 | `REMNAWAVE_PRIVACY` | no | `strict` by default, `basic` or `off` — see [Privacy](#privacy) |
 | `REMNAWAVE_PRIVACY_SALT` | no | Any long string — keeps pseudonyms stable across restarts |
@@ -436,6 +478,8 @@ REMNAWAVE_API_TOKEN = "YOUR_TOKEN"
 | `REMNAWAVE_GEOCHECK_COOLDOWN_MIN` | no | At most one GeoCheck per node every N minutes, default 30 (0 — no limit) |
 | `REMNAWAVE_CONNECTIONS_COOLDOWN_MIN` | no | Same for connection lists, default 2 |
 | `REMNAWAVE_TIMEOUT_MS` | no | Request timeout, default 30000 (0 — no timeout) |
+
+URL, token, name and headers without a number (`REMNAWAVE_BASE_URL`, `REMNAWAVE_API_KEY`, `REMNAWAVE_HEADERS`, `CF_ACCESS_…`) belong to the first panel, numbered ones — to the panel with that number. All other settings (`REMNAWAVE_READONLY`, `REMNAWAVE_PRIVACY`, limits, timeout) are shared by all panels.
 
 </details>
 
@@ -457,6 +501,7 @@ Or just ask:
 - "Run GeoCheck on node NL-1"
 - "Who is on node DE-1 right now and from how many IPs?"
 - "Top users by device count" / "Torrent report for the last day"
+- With several panels: "Compare online users on main and second", "Which panel has the client with Telegram ID 123456789?"
 
 GeoCheck and connection lists run on the node and cost its traffic, so a repeated request for the same node within 30 minutes (connections: 2 minutes) returns the previous result with a note instead of loading the node again.
 
@@ -502,7 +547,7 @@ Also:
 $env:REMNAWAVE_BASE_URL="https://panel.example.com"; $env:REMNAWAVE_API_TOKEN="YOUR_TOKEN"; node dist/index.js
 ```
 
-A line like `remnawave-mcp 1.3.1: 86 tools, read-only, privacy strict, https://panel.example.com` means the server starts (it then waits for a client — stop it with `Ctrl+C`). An error instead — look it up in the table.
+A line like `remnawave-mcp 1.4.0: 86 tools, read-only, privacy strict, https://panel.example.com` (with several panels — `… 2 panels: main (https://…), second (https://…)`) means the server starts (it then waits for a client — stop it with `Ctrl+C`). An error instead — look it up in the table.
 
 | Symptom | Fix |
 |---|---|
@@ -510,6 +555,8 @@ A line like `remnawave-mcp 1.3.1: 86 tools, read-only, privacy strict, https://p
 | `Remnawave API 401` | Token expired or deleted — create a new one |
 | `Remnawave API 403` | Token lacks `read` on a section — recreate it with the right scopes |
 | `fetch failed` / `ENOTFOUND` / timeout | Panel unreachable or wrong `REMNAWAVE_BASE_URL` |
+| `Specify the panel` / `Unknown panel` | Several panels are connected and the assistant did not say which one — name it in your question ("on panel main") |
+| `Two panels are named …` | Two panels have the same name — set different `REMNAWAVE_NAME`, `REMNAWAVE_2_NAME`, … |
 | Tools don't show up | Fully restart the client (Claude Desktop — tray → Quit) |
 
 **Server logs** are shown by the client itself — usually in its MCP settings or output panel. Claude Desktop writes them to files: Windows `%APPDATA%\Claude\logs\mcp-server-<name>.log`, macOS `~/Library/Logs/Claude/`.
@@ -555,13 +602,13 @@ src/
   limits.ts    — GeoCheck repeat limits and list size cap
   version.ts   — panel version vs. build version check
   client.ts    — HTTP requests to the panel
-  config.ts    — environment variables
+  config.ts    — environment variables, list of panels
 ```
 
 ### For developers
 
 ```bash
-npm test                    # 57 tests: privacy (nothing leaks), reports, limits, tool list
+npm test                    # 70 tests: privacy (nothing leaks), reports, limits, tool list, several panels
 npm run pack:mcpb           # extension for the current version → build/remnawave-3.4.mcpb
 npm run pack:mcpb -- --all  # for every 3.x version → build/remnawave-3.0.mcpb … remnawave-3.4.mcpb
 ```
