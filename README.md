@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/releases/latest"><img alt="release" src="https://img.shields.io/github/v/release/3APA3A-3AHO3A/remnawave-mcp?label=release&color=1f6feb"></a>
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/3APA3A-3AHO3A/remnawave-mcp/ci.yml?branch=main&label=CI"></a>
-  <a href="https://github.com/remnawave"><img alt="Remnawave" src="https://img.shields.io/badge/Remnawave-3.0%20%E2%80%93%203.4.5-0e8a9e"></a>
+  <a href="https://github.com/remnawave"><img alt="Remnawave" src="https://img.shields.io/badge/Remnawave-3.0%20%E2%80%93%203.4.7-0e8a9e"></a>
   <a href="https://modelcontextprotocol.io"><img alt="MCP" src="https://img.shields.io/badge/MCP-Claude%20%C2%B7%20Cursor%20%C2%B7%20VS%20Code%20%C2%B7%20any%20client-8957e5"></a>
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/actions/workflows/ci.yml"><img alt="tests" src="https://img.shields.io/badge/tests-70%20passed-3fb950"></a>
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/pkgs/container/remnawave-mcp"><img alt="docker" src="https://img.shields.io/badge/docker-ghcr.io%20%C2%B7%20amd64%20%7C%20arm64-1f6feb"></a>
@@ -34,7 +34,7 @@ MCP-сервер для панели [Remnawave](https://github.com/remnawave) *
 
 - **Только чтение по умолчанию.** Ничего в панели не меняется, пока вы явно не включите запись.
 - **Всегда под вашу версию панели.** Инструменты не написаны руками, а собираются из официального пакета [`@remnawave/backend-contract`](https://www.npmjs.com/package/@remnawave/backend-contract). Обновили панель → подняли версию пакета → пересобрали.
-- **Секреты недоступны никогда:** вход в панель, passkey, SECRET_KEY нод, API-токены.
+- **Секреты недоступны никогда:** вход в панель, passkey, SECRET_KEY нод, API-токены, SSH-билеты и хранилище SSH-ключей нод. Веб-терминал панели через MCP не открывается — чтобы ИИ заходил на сервер, используйте отдельный SSH MCP с ограниченным пользователем.
 - **Утечка чата не выдаёт ни ключей, ни клиентов.** Приватные ключи Reality, пароли, UUID и ссылки подключения скрываются, а личные данные клиентов (username, email, Telegram ID, IP, HWID) заменяются псевдонимами. Подробнее — [Приватность](#приватность).
 - **Готовые отчёты одной командой:** `panel_overview` (сводка по панели), `user_report` (всё о клиенте), `sharing_suspects` (кто делится подпиской), плюс `find_user`, `geocheck_node`, `node_connections`, `user_connections`.
 - **Несколько панелей в одном сервере.** Подключите две-три панели (или больше) — ассистент сам выберет нужную по имени, а ответы подписаны, с какой панели они пришли. Подробнее — [Несколько панелей](#несколько-панелей).
@@ -93,7 +93,7 @@ npm run build
 npm run list-tools
 ```
 
-Последняя строка должна быть вида `79 API tools + 7 extra (contract 3.4.5)`. Сервер — это файл `C:\Tools\remnawave-mcp\dist\index.js`, его путь понадобится в настройках клиента.
+Последняя строка должна быть вида `79 API tools + 7 extra (contract 3.4.7)`. Сервер — это файл `C:\Tools\remnawave-mcp\dist\index.js`, его путь понадобится в настройках клиента.
 
 На macOS / Linux — те же команды, путь любой (например, `~/remnawave-mcp`).
 

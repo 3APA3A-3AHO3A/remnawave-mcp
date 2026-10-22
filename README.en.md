@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/releases/latest"><img alt="release" src="https://img.shields.io/github/v/release/3APA3A-3AHO3A/remnawave-mcp?label=release&color=1f6feb"></a>
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/3APA3A-3AHO3A/remnawave-mcp/ci.yml?branch=main&label=CI"></a>
-  <a href="https://github.com/remnawave"><img alt="Remnawave" src="https://img.shields.io/badge/Remnawave-3.0%20%E2%80%93%203.4.5-0e8a9e"></a>
+  <a href="https://github.com/remnawave"><img alt="Remnawave" src="https://img.shields.io/badge/Remnawave-3.0%20%E2%80%93%203.4.7-0e8a9e"></a>
   <a href="https://modelcontextprotocol.io"><img alt="MCP" src="https://img.shields.io/badge/MCP-Claude%20%C2%B7%20Cursor%20%C2%B7%20VS%20Code%20%C2%B7%20any%20client-8957e5"></a>
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/actions/workflows/ci.yml"><img alt="tests" src="https://img.shields.io/badge/tests-70%20passed-3fb950"></a>
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/pkgs/container/remnawave-mcp"><img alt="docker" src="https://img.shields.io/badge/docker-ghcr.io%20%C2%B7%20amd64%20%7C%20arm64-1f6feb"></a>
@@ -34,7 +34,7 @@ MCP server for the [Remnawave](https://github.com/remnawave) **3.x** panel. It g
 
 - **Read-only by default.** Nothing in the panel changes unless you explicitly enable write tools.
 - **Always matches your panel version.** Tools are not hand-written: they are generated at startup from the official [`@remnawave/backend-contract`](https://www.npmjs.com/package/@remnawave/backend-contract) package. Panel updated → bump the package → rebuild.
-- **Secrets are never exposed:** panel login, passkeys, node SECRET_KEY, API tokens.
+- **Secrets are never exposed:** panel login, passkeys, node SECRET_KEY, API tokens, SSH tickets and the node SSH key vault. The panel's web terminal is not reachable through MCP — to let an assistant work on a server, use a separate SSH MCP with a restricted user.
 - **A leaked chat leaks neither keys nor clients.** Reality private keys, passwords, UUIDs and connection links are hidden; client personal data (username, email, Telegram ID, IP, HWID) is replaced with pseudonyms. See [Privacy](#privacy).
 - **Ready-made reports in one call:** `panel_overview` (panel summary), `user_report` (everything about a client), `sharing_suspects` (who shares a subscription), plus `find_user`, `geocheck_node`, `node_connections`, `user_connections`.
 - **Several panels in one server.** Connect two or three panels (or more) — the assistant picks the right one by name, and every answer says which panel it came from. See [Several panels](#several-panels).
@@ -93,7 +93,7 @@ npm run build
 npm run list-tools
 ```
 
-The last line should look like `79 API tools + 7 extra (contract 3.4.5)`. The server is the file `C:\Tools\remnawave-mcp\dist\index.js` — you will need its path in the client settings.
+The last line should look like `79 API tools + 7 extra (contract 3.4.7)`. The server is the file `C:\Tools\remnawave-mcp\dist\index.js` — you will need its path in the client settings.
 
 macOS / Linux: same commands, any path (e.g. `~/remnawave-mcp`).
 

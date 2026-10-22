@@ -57,6 +57,10 @@ const ALWAYS_BLOCKED = new Set([
     'CreateApiTokenCommand',
     'DeleteApiTokenCommand',
     'GetApiTokensCommand', // lists token values
+    // Node SSH (3.4.7+): a one-time ticket for the panel's browser terminal is a pass into the node console,
+    // and the vault "evaluate" step is a key-unlocking oracle — useless to an assistant, dangerous in a chat log.
+    'CreateSshTicketCommand',
+    'EvaluateVaultCommand',
     // Replaced by extra tools that start the job and wait for the result:
     'ConnectionsByNodeCommand',
     'ConnectionsByNodeResultCommand',

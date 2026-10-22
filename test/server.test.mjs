@@ -90,7 +90,8 @@ test('write mode still never exposes login / secrets / tokens', async () => {
     const { client } = await connect({ readonly: false });
     const names = (await client.listTools()).tools.map((t) => t.name);
     assert.ok(names.includes('update_user'));
-    for (const bad of ['login', 'get_node_secret_key', 'get_api_tokens', 'create_api_token', 'get_ott']) assert.ok(!names.includes(bad));
+    for (const bad of ['login', 'get_node_secret_key', 'get_api_tokens', 'create_api_token', 'get_ott', 'create_ssh_ticket', 'evaluate_vault'])
+        assert.ok(!names.includes(bad), `exposed: ${bad}`);
 });
 
 test('no leaks through any read tool response', async () => {
