@@ -46,7 +46,7 @@ MCP server for the [Remnawave](https://github.com/remnawave) **3.x** panel. It g
 
 | Panel version | Status |
 |---|---|
-| **3.4.x** | ✅ tested on production panels (3.4.5) |
+| **3.4.x** | ✅ tested on production panels (3.4.5) and on a 3.4.7 test panel — read and write |
 | **3.0 – 3.3** | ✅ a separate extension file per version; for a manual install — `npm i @remnawave/backend-contract@<version> --save-exact`. Tools your version doesn't have yet (e.g. GeoCheck, added in 3.4) are simply not shown |
 | **2.8.x** | ⚠️ not officially supported: core tools build, but not tested against a live panel; some extra tools are unavailable |
 | **2.7 and older** | ❌ use [TrackLine/mcp-remnawave](https://github.com/TrackLine/mcp-remnawave) |
