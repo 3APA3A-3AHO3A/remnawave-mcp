@@ -7,7 +7,7 @@
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/3APA3A-3AHO3A/remnawave-mcp/ci.yml?branch=main&label=CI"></a>
   <a href="https://github.com/remnawave"><img alt="Remnawave" src="https://img.shields.io/badge/Remnawave-3.0%20%E2%80%93%203.4.7-0e8a9e"></a>
   <a href="https://modelcontextprotocol.io"><img alt="MCP" src="https://img.shields.io/badge/MCP-Claude%20%C2%B7%20Cursor%20%C2%B7%20VS%20Code%20%C2%B7%20any%20client-8957e5"></a>
-  <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/actions/workflows/ci.yml"><img alt="tests" src="https://img.shields.io/badge/tests-70%20passed-3fb950"></a>
+  <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/actions/workflows/ci.yml"><img alt="tests" src="https://img.shields.io/badge/tests-73%20passed-3fb950"></a>
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/pkgs/container/remnawave-mcp"><img alt="docker" src="https://img.shields.io/badge/docker-ghcr.io%20%C2%B7%20amd64%20%7C%20arm64-1f6feb"></a>
   <a href="LICENSE"><img alt="license" src="https://img.shields.io/github/license/3APA3A-3AHO3A/remnawave-mcp?color=6e7681"></a>
 </p>
@@ -93,7 +93,7 @@ npm run build
 npm run list-tools
 ```
 
-The last line should look like `79 API tools + 7 extra (contract 3.4.7)`. The server is the file `C:\Tools\remnawave-mcp\dist\index.js` — you will need its path in the client settings.
+The last line should look like `78 API tools + 7 extra (contract 3.4.7)`. The server is the file `C:\Tools\remnawave-mcp\dist\index.js` — you will need its path in the client settings.
 
 macOS / Linux: same commands, any path (e.g. `~/remnawave-mcp`).
 
@@ -547,7 +547,7 @@ Also:
 $env:REMNAWAVE_BASE_URL="https://panel.example.com"; $env:REMNAWAVE_API_TOKEN="YOUR_TOKEN"; node dist/index.js
 ```
 
-A line like `remnawave-mcp 1.4.0: 86 tools, read-only, privacy strict, https://panel.example.com` (with several panels — `… 2 panels: main (https://…), second (https://…)`) means the server starts (it then waits for a client — stop it with `Ctrl+C`). An error instead — look it up in the table.
+A line like `remnawave-mcp 1.4.3: 85 tools, read-only, privacy strict, https://panel.example.com` (with several panels — `… 2 panels: main (https://…), second (https://…)`) means the server starts (it then waits for a client — stop it with `Ctrl+C`). An error instead — look it up in the table.
 
 | Symptom | Fix |
 |---|---|
@@ -608,7 +608,7 @@ src/
 ### For developers
 
 ```bash
-npm test                    # 70 tests: privacy (nothing leaks), reports, limits, tool list, several panels
+npm test                    # 73 tests: privacy (nothing leaks), reports, limits, tool list, several panels
 npm run pack:mcpb           # extension for the current version → build/remnawave-3.4.mcpb
 npm run pack:mcpb -- --all  # for every 3.x version → build/remnawave-3.0.mcpb … remnawave-3.4.mcpb
 ```
