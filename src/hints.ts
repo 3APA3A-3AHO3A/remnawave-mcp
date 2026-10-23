@@ -4,6 +4,10 @@
  */
 
 const RULES: [RegExp, string][] = [
+    // squad "bulk actions" take no user list: they act on every user of the panel / every member of the squad
+    [/^add_users_to_(internal|external)_squad$/, 'Adds ALL users of the panel to this squad — it takes no user list. For chosen users use add_many_users_to_internal_squad or update_user. State the total user count and get an explicit confirmation first.'],
+    [/^delete_users_from_(internal|external)_squad$/, 'Removes ALL members from this squad at once — it takes no user list. For chosen users use delete_many_users_from_internal_squad or update_user. Show the member count and get an explicit confirmation first.'],
+    [/^plugin_executor$/, 'Runs on live nodes right away: blockIps / unblockIps block or unblock the listed IPs, recreateTables recreates the plugin tables. targetNodes "allNodes" means every connected node. State the command, the nodes and the IPs and get an explicit confirmation first.'],
     [/^bulk_all_/, 'Applies to ALL users of the panel at once. State the total user count and get an explicit confirmation first.'],
     [/^bulk_.*delete|^delete_|truncate/, 'Irreversible. Show exactly what will be deleted (names/ids, count) and get an explicit confirmation first.'],
     [/^bulk_/, 'Affects many objects at once: list them with their count and get an explicit confirmation first.'],

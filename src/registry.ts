@@ -57,6 +57,7 @@ const ALWAYS_BLOCKED = new Set([
     'CreateApiTokenCommand',
     'DeleteApiTokenCommand',
     'GetApiTokensCommand', // lists token values
+    'GetApiTokenScopesCommand', // admin JWT only: always 403 with an API token, so it only confuses the assistant
     // Node SSH (3.4.7+): a one-time ticket for the panel's browser terminal is a pass into the node console,
     // and the vault "evaluate" step is a key-unlocking oracle — useless to an assistant, dangerous in a chat log.
     'CreateSshTicketCommand',
@@ -122,7 +123,11 @@ function buildInputSchema(pathParams: string[], param?: AnyZod, query?: AnyZod, 
     for (const r of q.required) required.add(r);
 
     if (body) {
-        properties.body = { ...jsonSchema(body), description: 'JSON request body' };
+        const bs = jsonSchema(body);
+        // hosts accept any integer as port in the contract; show the real range to the assistant (checked in server.ts too)
+        const port = (bs.properties as Record<string, Record<string, unknown>> | undefined)?.port;
+        if (port && (port.type === 'integer' || port.type === 'number')) Object.assign(port, { minimum: 1, maximum: 65535 });
+        properties.body = { ...bs, description: 'JSON request body' };
         required.add('body');
     }
     return {

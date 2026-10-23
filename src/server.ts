@@ -16,7 +16,7 @@ import { buildPrompts } from './prompts.js';
 import { VersionCheck } from './version.js';
 import { VIEWS } from './views.js';
 import { writeHint } from './hints.js';
-import { rejectUnknownArgs, validateArgs } from './validate.js';
+import { checkPorts, rejectUnknownArgs, rejectUnknownBodyKeys, validateArgs } from './validate.js';
 
 export function selectTools(all: ApiTool[], cfg: Config) {
     return all.filter(
@@ -65,11 +65,23 @@ async function callApi(client: RemnawaveClient, t: ApiTool, args: Record<string,
     let body: unknown;
     if (t.bodySchema) {
         body = args.body ?? {};
+        rejectUnknownBodyKeys(t.inputSchema, body);
+        checkPorts(body);
         const r = t.bodySchema.safeParse(body);
         if (!r.success) throw validationError('body', r.error);
     }
 
     return client.request(t.method, path, query, body);
+}
+
+/** Answer for a write call the panel confirmed with an empty body: which request, on which object. */
+function done(t: ApiTool, args: Record<string, unknown>) {
+    const target: Record<string, unknown> = Object.fromEntries(t.pathParams.map((k) => [k, args[k]]));
+    const body = args.body;
+    if (body && typeof body === 'object' && !Array.isArray(body))
+        for (const k of ['uuid', 'uuids', 'userId', 'userIds', 'name', 'hwid'])
+            if ((body as Record<string, unknown>)[k] !== undefined) target[k] = (body as Record<string, unknown>)[k];
+    return { ok: true, done: `${t.method} ${t.path}`, target, note: 'The panel confirmed the request (empty response).' };
 }
 
 export function instructions(cfg: Config, contractVersion: string, panels: string[] = []) {
@@ -261,6 +273,8 @@ export function createServer(opts: {
                 const { full, ...apiArgs } = args;
                 data = await callApi(client, t, VIEWS[name] ? apiArgs : args);
                 if (VIEWS[name] && full !== true) data = VIEWS[name](data);
+                // the panel answers many write calls (all deletes) with an empty body: say what was done instead of "null"
+                if (t.kind === 'write' && (data === null || data === undefined || data === '')) data = done(t, args);
             }
             const v = await versions.get();
             if (name === 'panel_overview' && data && typeof data === 'object')

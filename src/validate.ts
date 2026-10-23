@@ -76,3 +76,26 @@ export function rejectUnknownArgs(schema: { properties?: unknown }, args: Record
     if (unknown.length)
         throw new Error(`Invalid arguments:\n${unknown.map((k) => `- ${k}: unknown argument (allowed: ${props.join(', ') || 'none'})`).join('\n')}`);
 }
+
+/**
+ * API tools: unknown top-level fields of `body` are refused too. The contract's zod schemas silently drop them,
+ * so a misspelled field would make the call "succeed" without changing anything.
+ */
+export function rejectUnknownBodyKeys(schema: { properties?: unknown }, body: unknown) {
+    const bs = (schema.properties as Record<string, { properties?: object; additionalProperties?: unknown }> | undefined)?.body;
+    if (!bs?.properties || (bs.additionalProperties !== undefined && bs.additionalProperties !== false)) return;
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return;
+    const allowed = Object.keys(bs.properties);
+    const unknown = Object.keys(body).filter((k) => !allowed.includes(k));
+    if (unknown.length)
+        throw new Error(`Invalid arguments:\n${unknown.map((k) => `- body.${k}: unknown field (allowed: ${allowed.join(', ')})`).join('\n')}`);
+}
+
+/** The contract lets a host port be any integer and the panel stores it as is: a port must be 1–65535. */
+export function checkPorts(body: unknown) {
+    if (!body || typeof body !== 'object' || !('port' in body)) return;
+    const p = (body as { port: unknown }).port;
+    if (p === undefined || p === null) return;
+    if (typeof p !== 'number' || !Number.isInteger(p) || p < 1 || p > 65535)
+        throw new Error(`Invalid arguments:\n- body.port: must be an integer from 1 to 65535`);
+}
