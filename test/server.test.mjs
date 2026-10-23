@@ -49,6 +49,7 @@ function mockClient(log, panelVersion = '3.4.4') {
             };
             if (path.startsWith('/api/connections/geocheck/11111111-1111-4111-8111-111111111111')) return { jobId: 'j1' };
             if (path === '/api/connections/geocheck/j1') return { isCompleted: true, isFailed: false, result: { success: true, nodeUuid: 'n1', image: { data: 'x' }, rawReport: { ip: '5.6.7.8' } } };
+            if (method === 'DELETE') return null; // the panel answers deletes with an empty body
             return { path };
         },
     };
@@ -90,7 +91,7 @@ test('write mode still never exposes login / secrets / tokens', async () => {
     const { client } = await connect({ readonly: false });
     const names = (await client.listTools()).tools.map((t) => t.name);
     assert.ok(names.includes('update_user'));
-    for (const bad of ['login', 'get_node_secret_key', 'get_api_tokens', 'create_api_token', 'get_ott', 'create_ssh_ticket', 'evaluate_vault'])
+    for (const bad of ['login', 'get_node_secret_key', 'get_api_tokens', 'create_api_token', 'get_ott', 'create_ssh_ticket', 'evaluate_vault', 'get_api_token_scopes'])
         assert.ok(!names.includes(bad), `exposed: ${bad}`);
 });
 
@@ -214,6 +215,11 @@ test('write tools carry warnings only in write mode', async () => {
     assert.match(d('bulk_all_extend_expiration_date'), /ALL users/);
     assert.match(d('delete_user'), /Irreversible/);
     assert.match(d('update_user'), /confirm with the user/);
+    assert.match(d('add_users_to_internal_squad'), /ALL users/);
+    assert.match(d('add_users_to_external_squad'), /ALL users/);
+    assert.match(d('delete_users_from_internal_squad'), /ALL members/);
+    assert.match(d('delete_users_from_external_squad'), /ALL members/);
+    assert.match(d('plugin_executor'), /blockIps/);
 });
 
 test('path traversal through tool arguments is refused and never reaches the panel', async () => {
@@ -363,4 +369,44 @@ test('several panels: pseudonyms still resolve, prompts get a panel argument', a
     assert.match(one.messages[0].content.text, /panel "second" only/);
     const all = await client.getPrompt({ name: 'daily_summary', arguments: {} });
     assert.match(all.messages[0].content.text, /for each panel/);
+});
+
+test('unknown body fields are refused instead of being dropped silently', async () => {
+    const { call, log } = await connect({ readonly: false });
+    const uuid = '15f20d75-2140-4a9c-b6d5-3800f9139ace';
+    const r = await call('update_host', { body: { uuid, bogusField: 1 } });
+    assert.ok(r.isError);
+    assert.match(r.text, /body\.bogusField: unknown field/);
+    assert.ok(!log.some((l) => l.path === '/api/hosts/'));
+    assert.ok(!(await call('update_host', { body: { uuid, remark: 'ok' } })).isError);
+});
+
+test('host and node ports must be 1-65535, the schema shows the range', async () => {
+    const { client, call, log } = await connect({ readonly: false });
+    const uuid = '15f20d75-2140-4a9c-b6d5-3800f9139ace';
+    for (const port of [70000, 0, -1]) {
+        const r = await call('update_host', { body: { uuid, port } });
+        assert.ok(r.isError, `port ${port} accepted`);
+        assert.match(r.text, /body\.port: must be an integer from 1 to 65535/);
+    }
+    assert.ok(!log.some((l) => l.path === '/api/hosts/'));
+    assert.ok(!(await call('update_host', { body: { uuid, port: 8443 } })).isError);
+    const tools = (await client.listTools()).tools;
+    for (const n of ['create_host', 'update_host', 'update_many_hosts', 'create_node']) {
+        const port = tools.find((t) => t.name === n).inputSchema.properties.body.properties.port;
+        assert.equal(port.minimum, 1, n);
+        assert.equal(port.maximum, 65535, n);
+    }
+});
+
+test('write calls with an empty panel answer say what was done', async () => {
+    const { call } = await connect({ readonly: false });
+    const uuid = '15f20d75-2140-4a9c-b6d5-3800f9139ace';
+    const host = await call('delete_host', { uuid });
+    assert.ok(!host.isError);
+    assert.match(host.text, /"ok":\s*true/);
+    assert.match(host.text, /DELETE \/api\/hosts\/:uuid/);
+    assert.ok(host.text.includes(uuid));
+    const snippet = await call('delete_snippet', { body: { name: 'mcp_test_snippet' } });
+    assert.ok(snippet.text.includes('mcp_test_snippet'));
 });
