@@ -265,6 +265,7 @@ export function createServer(opts: {
                 data = extra.cooldown
                     ? await cooldowns[extra.cooldown.kind].run(`${panel.name}:${extra.cooldown.key(args)}`, run)
                     : await run();
+                if (extra.view && args.full !== true) data = extra.view(data);
             } else {
                 const t = byName.get(name);
                 if (!t) throw new Error(`Unknown tool: ${name}`);

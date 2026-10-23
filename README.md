@@ -7,7 +7,7 @@
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/3APA3A-3AHO3A/remnawave-mcp/ci.yml?branch=main&label=CI"></a>
   <a href="https://github.com/remnawave"><img alt="Remnawave" src="https://img.shields.io/badge/Remnawave-3.0%20%E2%80%93%203.4.7-0e8a9e"></a>
   <a href="https://modelcontextprotocol.io"><img alt="MCP" src="https://img.shields.io/badge/MCP-Claude%20%C2%B7%20Cursor%20%C2%B7%20VS%20Code%20%C2%B7%20any%20client-8957e5"></a>
-  <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/actions/workflows/ci.yml"><img alt="tests" src="https://img.shields.io/badge/tests-73%20passed-3fb950"></a>
+  <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/actions/workflows/ci.yml"><img alt="tests" src="https://img.shields.io/badge/tests-74%20passed-3fb950"></a>
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/pkgs/container/remnawave-mcp"><img alt="docker" src="https://img.shields.io/badge/docker-ghcr.io%20%C2%B7%20amd64%20%7C%20arm64-1f6feb"></a>
   <a href="LICENSE"><img alt="license" src="https://img.shields.io/github/license/3APA3A-3AHO3A/remnawave-mcp?color=6e7681"></a>
 </p>
@@ -39,7 +39,7 @@ MCP-сервер для панели [Remnawave](https://github.com/remnawave) *
 - **Готовые отчёты одной командой:** `panel_overview` (сводка по панели), `user_report` (всё о клиенте), `sharing_suspects` (кто делится подпиской), плюс `find_user`, `geocheck_node`, `node_connections`, `user_connections`.
 - **Несколько панелей в одном сервере.** Подключите две-три панели (или больше) — ассистент сам выберет нужную по имени, а ответы подписаны, с какой панели они пришли. Подробнее — [Несколько панелей](#несколько-панелей).
 - **Шаблоны запросов** в клиентах с поддержкой MCP-шаблонов: «Сводка по панели», «Разбор клиента», «Кто делится подпиской», «Проверка нод».
-- **Бережёт ноды и лимиты:** повторный GeoCheck одной ноды в течение 30 минут отдаёт прошлый результат, ответы сжаты (в 2–3 раза меньше токенов), список нод по умолчанию короткий (`full: true` — полный).
+- **Бережёт ноды и лимиты:** повторный GeoCheck одной ноды в течение 30 минут отдаёт прошлый результат, ответы сжаты (в 2–3 раза меньше токенов), список нод и отчёт GeoCheck по умолчанию короткие (`full: true` — полные).
 - **Три способа установки:** сборка из исходников (Node.js) и Docker-образ под каждую версию панели — для любого клиента; для Claude Desktop — ещё и расширение в один клик, токен хранится в защищённом хранилище системы.
 
 ## Совместимость
@@ -547,7 +547,7 @@ GeoCheck и запросы подключений выполняются на н
 $env:REMNAWAVE_BASE_URL="https://panel.example.com"; $env:REMNAWAVE_API_TOKEN="ВАШ_ТОКЕН"; node dist/index.js
 ```
 
-Строка `remnawave-mcp 1.4.3: 85 tools, read-only, privacy strict, https://panel.example.com` (с несколькими панелями — `… 2 panels: main (https://…), second (https://…)`) значит, что сервер запускается (дальше он ждёт клиента — закройте его `Ctrl+C`). Ошибка вместо неё — ищите её в таблице.
+Строка `remnawave-mcp 1.4.4: 85 tools, read-only, privacy strict, https://panel.example.com` (с несколькими панелями — `… 2 panels: main (https://…), second (https://…)`) значит, что сервер запускается (дальше он ждёт клиента — закройте его `Ctrl+C`). Ошибка вместо неё — ищите её в таблице.
 
 | Симптом | Что делать |
 |---|---|
@@ -618,7 +618,7 @@ src/
 ### Для разработчиков
 
 ```powershell
-npm test                    # 73 теста: приватность (ничего не утекает), отчёты, ограничения, список инструментов, несколько панелей
+npm test                    # 74 теста: приватность (ничего не утекает), отчёты, ограничения, список инструментов, несколько панелей
 npm run pack:mcpb           # расширение под текущую версию → build\remnawave-3.4.mcpb
 npm run pack:mcpb -- --all  # под все версии 3.x → build\remnawave-3.0.mcpb … remnawave-3.4.mcpb
 ```

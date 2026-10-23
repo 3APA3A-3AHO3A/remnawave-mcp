@@ -49,9 +49,41 @@ function mockClient(log, panelVersion = '3.4.4') {
             };
             if (path.startsWith('/api/connections/geocheck/11111111-1111-4111-8111-111111111111')) return { jobId: 'j1' };
             if (path === '/api/connections/geocheck/j1') return { isCompleted: true, isFailed: false, result: { success: true, nodeUuid: 'n1', image: { data: 'x' }, rawReport: { ip: '5.6.7.8' } } };
+            if (path.startsWith('/api/connections/geocheck/22222222-2222-4222-8222-222222222222')) return { jobId: 'j2' };
+            if (path === '/api/connections/geocheck/j2') return { isCompleted: true, isFailed: false, result: { success: true, nodeUuid: 'n2', image: 'x', rawReport: geoReport() } };
             if (method === 'DELETE') return null; // the panel answers deletes with an empty body
             return { path };
         },
+    };
+}
+
+function geoReport() {
+    const hops = Array.from({ length: 12 }, (_, i) => ({ ttl: i + 1, addr: `10.0.0.${i}`, sent: 5, recv: 5, loss: 0, best_ms: 1, avg_ms: 1, worst_ms: 1 }));
+    return {
+        identity: { ipv4: '5.6.7.8', asn: 1, as_name: 'HOSTER' },
+        reputation: { country_code: 'FI', vpn: false, hosting: false },
+        geo: {
+            services: [
+                { id: 'google', name: 'Google', kind: 'country', ipv4: { value: 'RU', country: 'Russia' } },
+                { id: 'reddit', name: 'Reddit', kind: 'country', ipv4: { error: 'blocked hosting range' } },
+                { id: 'yt_premium', name: 'YouTube Premium', kind: 'availability', ipv4: { value: 'no' } },
+            ],
+            geoip: [{ id: 'maxmind', name: 'maxmind.com', kind: 'country', ipv4: { value: 'FI', country: 'Finland' } }],
+        },
+        connectivity_checks: {
+            clean: false, ok: 1, altered: 1,
+            endpoints: [
+                { name: 'Google (Android)', verdict: 'ok', status: 204, expected_status: 204, rtt_ms: 40 },
+                { name: 'Apple', verdict: 'altered', status: 302, expected_status: 200, body: '<html>portal</html>' },
+            ],
+        },
+        stash_checks: [{ id: 'gemini', name: 'Gemini', state: 'blocked', region: 'RUS', detail: 'not offered in this country', rtt_ms: 200 }],
+        ai_endpoints: [{ id: 'openai', name: 'OpenAI', state: 'reachable', http_status: 401, rtt_ms: 100 }],
+        connectivity: {
+            score: 83, latency_floor_ms: 7, breakdown: { direct: 1 },
+            targets: [{ id: 'cf', name: 'cloudflare.com', verdict: 'transit', score: 88, rtt_ms: 7.7, loss: 0, hops, transits: [{ asn: 6762, name: 'Sparkle' }], notes: ['long note'] }],
+        },
+        future_section: { kept: true },
     };
 }
 
@@ -409,4 +441,28 @@ test('write calls with an empty panel answer say what was done', async () => {
     assert.ok(host.text.includes(uuid));
     const snippet = await call('delete_snippet', { body: { name: 'mcp_test_snippet' } });
     assert.ok(snippet.text.includes('mcp_test_snippet'));
+});
+
+test('geocheck: compact report by default, raw with full: true, the cache keeps the raw report', async () => {
+    const { call, log } = await connect();
+    const nodeUuid = '22222222-2222-4222-8222-222222222222';
+    const compactText = (await call('geocheck_node', { nodeUuid })).text;
+    const rep = JSON.parse(compactText).result.rawReport;
+    assert.ok(!compactText.includes('"hops"') && !compactText.includes('10.0.0.'), 'hops must be dropped');
+    assert.deepEqual(rep.geo.services, { Google: 'RU', Reddit: 'error: blocked hosting range', 'YouTube Premium': 'no' });
+    assert.deepEqual(rep.geo.geoip, { 'maxmind.com': 'FI' });
+    assert.deepEqual(rep.connectivity_checks.problems, [{ name: 'Apple', verdict: 'altered', status: 302, expected_status: 200 }]);
+    assert.equal(rep.stash_checks.Gemini, 'blocked, RUS, not offered in this country');
+    assert.equal(rep.ai_endpoints.OpenAI, 'reachable');
+    assert.deepEqual(rep.connectivity.targets, [{ name: 'cloudflare.com', verdict: 'transit', rttMs: 7.7, loss: 0, via: 'Sparkle' }]);
+    assert.deepEqual(rep.future_section, { kept: true }, 'unknown sections pass through');
+    assert.equal(rep.identity.ipv4, '5.6.7.8', 'node IP is our own infrastructure, not pseudonymized');
+    const starts = log.filter((l) => l.method === 'POST').length;
+    const raw = JSON.parse((await call('geocheck_node', { nodeUuid, full: true })).text);
+    assert.equal(raw.cached, true);
+    assert.equal(raw.result.result.rawReport.connectivity.targets[0].hops.length, 12, 'full: true returns the raw cached report');
+    assert.equal(log.filter((l) => l.method === 'POST').length, starts, 'full: true does not start a new check');
+    const again = (await call('geocheck_node', { nodeUuid })).text;
+    assert.ok(JSON.parse(again).cached && !again.includes('"hops"'), 'cached answer is compact too');
+    assert.ok(again.length < JSON.stringify(raw).length);
 });

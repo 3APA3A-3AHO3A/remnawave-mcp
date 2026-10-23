@@ -1,6 +1,7 @@
 import * as contract from '@remnawave/backend-contract';
 import type { RemnawaveClient } from './client.js';
 import { seg } from './validate.js';
+import { compactGeocheck } from './views.js';
 
 /**
  * Convenience tools on top of the raw API:
@@ -18,6 +19,8 @@ export interface ExtraTool {
     userData?: boolean;
     /** job on a node: repeated calls for the same target within a cooldown return the cached result */
     cooldown?: { kind: 'geocheck' | 'connections'; key: (args: Record<string, unknown>) => string };
+    /** short view of the answer, skipped with `full: true`; applied after the cooldown cache, which keeps the raw answer */
+    view?: (data: unknown) => unknown;
     description: string;
     inputSchema: Record<string, unknown>;
     run: (client: RemnawaveClient, args: Record<string, unknown>) => Promise<unknown>;
@@ -254,10 +257,13 @@ export const extraTools: ExtraTool[] = [
         requires: ['GeocheckByNodeCommand', 'GeocheckByNodeResultCommand'],
         userData: false,
         cooldown: { kind: 'geocheck', key: (a) => `geo:${a.nodeUuid}:${a.ip ?? ''}:${a.interface ?? ''}` },
+        view: compactGeocheck,
         description:
             'Run GeoCheck on a node and wait for the result (how services see the node IP: country, blocks). ' +
-            'The base64 SVG image is dropped, only the raw report is returned. Uses node traffic: repeated calls for ' +
-            'the same node within the cooldown return the previous result.',
+            'Returns a compact report: country per service and GeoIP base, reputation, blocks, one line per route target. ' +
+            'Pass full: true for the raw report with every traceroute hop (large); the SVG image is always dropped. ' +
+            'Uses node traffic: repeated calls for the same node within the cooldown return the previous result ' +
+            '(also with full: true — it does not start a new check).',
         inputSchema: {
             type: 'object',
             properties: {
@@ -265,6 +271,7 @@ export const extraTools: ExtraTool[] = [
                 ip: { type: 'string', description: 'Optional: check from this outbound IP' },
                 interface: { type: 'string', description: 'Optional: check from this network interface' },
                 timeoutSec: timeoutParam,
+                full: { type: 'boolean', default: false, description: 'Return the raw report with traceroute hops (large)' },
             },
             required: ['nodeUuid'],
             additionalProperties: false,
