@@ -148,3 +148,30 @@ test('pseudonym collision: two values never share a pseudonym and each is restor
     assert.equal(p.restore(a), pair[0]);
     assert.equal(p.restore(b), pair[1]);
 });
+
+test('host mappers: credentials written by "set" are hidden, other operations stay readable', () => {
+    const cred = '8b07c180-0000-4000-8000-000000000001';
+    const host = {
+        remark: 'LTE 3',
+        mapper: {
+            base64: [{ op: 'set', to: '$link.password', value: cred }, { op: 'set', to: 'fp', value: 'chrome' }],
+            mihomo: [{ op: 'set', to: 'uuid', value: cred }, { op: 'set', to: 'password', value: cred }],
+            xrayJson: [
+                { op: 'set', to: 'settings.vnext.0.users.0.id', value: cred },
+                { op: 'set', to: 'streamSettings.hysteriaSettings.auth', value: cred },
+                { op: 'set', to: 'streamSettings.tlsSettings.enableSessionResumption', value: true },
+                { op: 'copy', from: 'streamSettings.realitySettings.serverNames.0', to: 'sni' },
+                { op: 'unset', to: 'mux' },
+            ],
+            singbox: [{ op: 'set', to: 'tls.reality.short_id', value: cred }],
+        },
+    };
+    for (const mode of ['strict', 'basic']) {
+        const out = JSON.stringify(new Privacy(mode).apply([host]));
+        assertNoLeak(assert, out, [cred]);
+        assert.equal((out.match(/\[hidden\]/g) || []).length, 6, out);
+        assert.ok(out.includes('"value":"chrome"') && out.includes('"value":true'));
+        assert.ok(out.includes('"from":"streamSettings.realitySettings.serverNames.0"') && out.includes('"to":"mux"'));
+    }
+    assert.ok(JSON.stringify(new Privacy('off').apply(host)).includes(cred), 'privacy off shows the raw value');
+});

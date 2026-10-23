@@ -13,6 +13,8 @@ import { createHmac, randomBytes } from 'node:crypto';
  * Also inside Xray configs (profiles, snippets, templates): the shortId of a Reality outbound, the user id of
  * VLESS/VMess outbounds (settings.id, vnext[].users[].id) and the Hysteria auth string — with these and a public
  * key anyone can connect through the cascade.
+ * Host mappers (3.4.7+): a `set` operation can write a client credential into the generated config
+ * ({ op: 'set', to: '$link.password' | 'uuid' | '…users.0.id' | '…hysteriaSettings.auth', value }) — its value is hidden.
  *
  * Personal data (strict): username, email, Telegram ID, user description, IP addresses, HWID,
  * computer names in device models (DESKTOP-…) →
@@ -33,6 +35,8 @@ const AUTH_MODES = new Set(['noauth', 'password']);
 const ACCOUNT_MARKERS = ['flow', 'encryption', 'alterId'];
 /** Reality short IDs are part of the handshake auth — hide them as well */
 const SECRET_LIST_KEYS = new Set(['shortIds']);
+/** host mapper targets that carry a credential: link password, VLESS uuid / user id, Hysteria auth, Reality shortId */
+const MAPPER_SECRET_TO_RE = /(passw(or)?d|uuid|(^|\.)id$|auth|secret|token|private_?key|psk|(^|\.)sid$|short_?id)/i;
 /** IPv4 / IPv6, optionally with a CIDR mask or a port; values like "geoip:private" in Xray rules are left alone */
 const IPV4 = '\\d{1,3}(?:\\.\\d{1,3}){3}';
 const IPV6 = '[0-9a-f]{0,4}(?::[0-9a-f]{0,4}){2,7}';
@@ -151,8 +155,11 @@ export class Privacy {
             // user object: has a subscription short UUID or traffic/expiry fields of a user
             const isUser = inUser || ('shortUuid' in obj && ['expireAt', 'expiresAt', 'status', 'userStatus'].some((k) => k in obj));
             const isAccount = typeof obj.id === 'string' && ACCOUNT_MARKERS.some((m) => m in obj);
+            // host mapper operation that writes a credential, e.g. { op: 'set', to: '$link.password', value: '<uuid>' }
+            const isSecretSet = typeof obj.op === 'string' && typeof obj.to === 'string' && 'value' in obj && MAPPER_SECRET_TO_RE.test(obj.to);
             const out: Record<string, unknown> = {};
-            for (const [k, v] of Object.entries(obj)) out[k] = isAccount && k === 'id' ? MASK : this.apply(v, k, isUser);
+            for (const [k, v] of Object.entries(obj))
+                out[k] = (isAccount && k === 'id') || (isSecretSet && k === 'value' && v !== '' && v !== null) ? MASK : this.apply(v, k, isUser);
             // HWID device of a computer: deviceModel carries the computer name, e.g. "DESKTOP-QQNA3B4_x86_64"
             if (strict && typeof obj.deviceModel === 'string' && 'hwid' in obj) out.deviceModel = this.pcName(obj.deviceModel, obj.platform);
             return out;
