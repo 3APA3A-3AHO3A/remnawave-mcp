@@ -547,7 +547,7 @@ GeoCheck и запросы подключений выполняются на н
 $env:REMNAWAVE_BASE_URL="https://panel.example.com"; $env:REMNAWAVE_API_TOKEN="ВАШ_ТОКЕН"; node dist/index.js
 ```
 
-Строка `remnawave-mcp 1.4.5: 85 tools, read-only, privacy strict, https://panel.example.com` (с несколькими панелями — `… 2 panels: main (https://…), second (https://…)`) значит, что сервер запускается (дальше он ждёт клиента — закройте его `Ctrl+C`). Ошибка вместо неё — ищите её в таблице.
+Строка `remnawave-mcp 1.4.6: 85 tools, read-only, privacy strict, https://panel.example.com` (с несколькими панелями — `… 2 panels: main (https://…), second (https://…)`) значит, что сервер запускается (дальше он ждёт клиента — закройте его `Ctrl+C`). Ошибка вместо неё — ищите её в таблице.
 
 | Симптом | Что делать |
 |---|---|

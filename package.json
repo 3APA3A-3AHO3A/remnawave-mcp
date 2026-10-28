@@ -1,6 +1,6 @@
 {
   "name": "remnawave-mcp",
-  "version": "1.4.5",
+  "version": "1.4.6",
   "description": "MCP-сервер для панели Remnawave 3.x (Claude Desktop, Cursor и др.). Инструменты генерируются из @remnawave/backend-contract, по умолчанию только чтение.",
   "type": "module",
   "main": "dist/index.js",
@@ -36,12 +36,15 @@
     "node": ">=22.0.0"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.32.1",
+    "@modelcontextprotocol/sdk": "1.32.2",
     "@remnawave/backend-contract": "3.4.7",
-    "zod": "4.4.3"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",
     "typescript": "7.0"
+  },
+  "overrides": {
+    "zod": "$zod"
   }
 }
