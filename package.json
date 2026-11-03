@@ -37,8 +37,8 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",
-    "@remnawave/backend-contract": "3.4.7",
-    "zod": "4.6.7"
+    "@remnawave/backend-contract": "3.4.8",
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
