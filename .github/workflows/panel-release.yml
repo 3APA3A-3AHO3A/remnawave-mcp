@@ -1,6 +1,9 @@
 # Каждый день смотрит последний СТАБИЛЬНЫЙ релиз панели Remnawave (remnawave/panel, «Latest»).
-# Если он новее контракта в package.json — ставит контракт этой версии (и zod той же версии,
-# что внутри контракта), собирает проект и открывает Pull Request.
+# Если он новее контракта в package.json — ставит контракт этой версии, собирает проект,
+# прогоняет тесты и npm audit и открывает Pull Request.
+# zod не понижается: контракт жёстко требует старую версию, а свежая (без уязвимостей)
+# подставляется ему через overrides в package.json. zod поднимается, только если контракт
+# требует версию новее нашей.
 name: Panel release check
 on:
   schedule:
@@ -51,11 +54,17 @@ jobs:
         run: |
           V=${{ steps.v.outputs.panel }}
           ZOD=$(npm view "@remnawave/backend-contract@$V" dependencies.zod)
+          OURS=$(node -p "require('./package.json').dependencies.zod")
           npm ci
-          npm i "@remnawave/backend-contract@$V" "zod@$ZOD" --save-exact
+          if [ "$(printf '%s\n%s\n' "$OURS" "$ZOD" | sort -V | tail -1)" != "$OURS" ]; then
+            npm i "@remnawave/backend-contract@$V" "zod@$ZOD" --save-exact
+          else
+            npm i "@remnawave/backend-contract@$V" --save-exact
+          fi
           npm run build
           npm run list-tools:all | tail -1
           npm test
+          npm audit --omit=dev --audit-level=high
 
       - name: Открыть Pull Request
         if: steps.v.outputs.update == 'true'
@@ -68,8 +77,8 @@ jobs:
           git checkout -b "panel-$V"
           git commit -am "Контракт Remnawave $V (стабильный релиз панели)"
           git push -u origin "panel-$V"
-          gh pr create --title "Remnawave $V: обновить контракт" --body "Вышел стабильный релиз панели **v$V**. Контракт и zod обновлены, сборка и тесты (в т.ч. приватности) прошли. Смержите, когда обновите свои панели до $V." --label dependencies || \
-          gh pr create --title "Remnawave $V: обновить контракт" --body "Вышел стабильный релиз панели **v$V**. Контракт и zod обновлены, сборка и тесты (в т.ч. приватности) прошли. Смержите, когда обновите свои панели до $V."
+          gh pr create --title "Remnawave $V: обновить контракт" --body "Вышел стабильный релиз панели **v$V**. Контракт обновлён, сборка, тесты (в т.ч. приватности) и npm audit прошли. Смержите, когда обновите свои панели до $V." --label dependencies || \
+          gh pr create --title "Remnawave $V: обновить контракт" --body "Вышел стабильный релиз панели **v$V**. Контракт обновлён, сборка, тесты (в т.ч. приватности) и npm audit прошли. Смержите, когда обновите свои панели до $V."
 
       # PR, открытый роботом, не запускает CI сам: GitHub ставит такой запуск в ожидание ручного одобрения.
       # Запускаем CI для ветки PR явно — галочка появится на PR как у обычных PR,
