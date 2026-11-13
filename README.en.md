@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/releases/latest"><img alt="release" src="https://img.shields.io/github/v/release/3APA3A-3AHO3A/remnawave-mcp?label=release&color=1f6feb"></a>
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/3APA3A-3AHO3A/remnawave-mcp/ci.yml?branch=main&label=CI"></a>
-  <a href="https://github.com/remnawave"><img alt="Remnawave" src="https://img.shields.io/badge/Remnawave-3.0%20%E2%80%93%203.4.8-0e8a9e"></a>
+  <a href="https://github.com/remnawave"><img alt="Remnawave" src="https://img.shields.io/badge/Remnawave-3.0%20%E2%80%93%203.4.10-0e8a9e"></a>
   <a href="https://modelcontextprotocol.io"><img alt="MCP" src="https://img.shields.io/badge/MCP-Claude%20%C2%B7%20Cursor%20%C2%B7%20VS%20Code%20%C2%B7%20any%20client-8957e5"></a>
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/actions/workflows/ci.yml"><img alt="tests" src="https://img.shields.io/badge/tests-75%20passed-3fb950"></a>
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/pkgs/container/remnawave-mcp"><img alt="docker" src="https://img.shields.io/badge/docker-ghcr.io%20%C2%B7%20amd64%20%7C%20arm64-1f6feb"></a>
@@ -46,7 +46,7 @@ MCP server for the [Remnawave](https://github.com/remnawave) **3.x** panel. It g
 
 | Panel version | Status |
 |---|---|
-| **3.4.x** | ✅ tested on production panels (3.4.5) and on a 3.4.7 test panel — read and write |
+| **3.4.x** | ✅ tested on panels 3.4.5, 3.4.6, 3.4.7, 3.4.8 and 3.4.10 — read and write |
 | **3.0 – 3.3** | ✅ a separate extension file per version; for a manual install — `npm i @remnawave/backend-contract@<version> --save-exact`. Tools your version doesn't have yet (e.g. GeoCheck, added in 3.4) are simply not shown |
 | **2.8.x** | ⚠️ not officially supported: core tools build, but not tested against a live panel; some extra tools are unavailable |
 | **2.7 and older** | ❌ use [TrackLine/mcp-remnawave](https://github.com/TrackLine/mcp-remnawave) |
@@ -93,7 +93,7 @@ npm run build
 npm run list-tools
 ```
 
-The last line should look like `78 API tools + 7 extra (contract 3.4.8)`. The server is the file `C:\Tools\remnawave-mcp\dist\index.js` — you will need its path in the client settings.
+The last line should look like `78 API tools + 7 extra (contract 3.4.10)`. The server is the file `C:\Tools\remnawave-mcp\dist\index.js` — you will need its path in the client settings.
 
 macOS / Linux: same commands, any path (e.g. `~/remnawave-mcp`).
 

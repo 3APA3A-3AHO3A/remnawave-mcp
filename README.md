@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/releases/latest"><img alt="release" src="https://img.shields.io/github/v/release/3APA3A-3AHO3A/remnawave-mcp?label=release&color=1f6feb"></a>
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/3APA3A-3AHO3A/remnawave-mcp/ci.yml?branch=main&label=CI"></a>
-  <a href="https://github.com/remnawave"><img alt="Remnawave" src="https://img.shields.io/badge/Remnawave-3.0%20%E2%80%93%203.4.8-0e8a9e"></a>
+  <a href="https://github.com/remnawave"><img alt="Remnawave" src="https://img.shields.io/badge/Remnawave-3.0%20%E2%80%93%203.4.10-0e8a9e"></a>
   <a href="https://modelcontextprotocol.io"><img alt="MCP" src="https://img.shields.io/badge/MCP-Claude%20%C2%B7%20Cursor%20%C2%B7%20VS%20Code%20%C2%B7%20any%20client-8957e5"></a>
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/actions/workflows/ci.yml"><img alt="tests" src="https://img.shields.io/badge/tests-75%20passed-3fb950"></a>
   <a href="https://github.com/3APA3A-3AHO3A/remnawave-mcp/pkgs/container/remnawave-mcp"><img alt="docker" src="https://img.shields.io/badge/docker-ghcr.io%20%C2%B7%20amd64%20%7C%20arm64-1f6feb"></a>
@@ -46,7 +46,7 @@ MCP-сервер для панели [Remnawave](https://github.com/remnawave) *
 
 | Версия панели | Статус |
 |---|---|
-| **3.4.x** | ✅ проверено на рабочих панелях (3.4.5) и на тестовой панели 3.4.7 — чтение и запись |
+| **3.4.x** | ✅ проверено на панелях 3.4.5, 3.4.6, 3.4.7, 3.4.8 и 3.4.10 — чтение и запись |
 | **3.0 – 3.3** | ✅ отдельный файл расширения под каждую версию; при ручной установке — `npm i @remnawave/backend-contract@<версия> --save-exact`. Команды, которых в вашей версии ещё нет (например, GeoCheck появился в 3.4), просто не показываются |
 | **2.8.x** | ⚠️ не поддерживается официально: основные команды собираются, но на живой панели не проверялось, часть доп. команд недоступна |
 | **2.7 и старше** | ❌ используйте [TrackLine/mcp-remnawave](https://github.com/TrackLine/mcp-remnawave) |
@@ -93,7 +93,7 @@ npm run build
 npm run list-tools
 ```
 
-Последняя строка должна быть вида `78 API tools + 7 extra (contract 3.4.8)`. Сервер — это файл `C:\Tools\remnawave-mcp\dist\index.js`, его путь понадобится в настройках клиента.
+Последняя строка должна быть вида `78 API tools + 7 extra (contract 3.4.10)`. Сервер — это файл `C:\Tools\remnawave-mcp\dist\index.js`, его путь понадобится в настройках клиента.
 
 На macOS / Linux — те же команды, путь любой (например, `~/remnawave-mcp`).
 
