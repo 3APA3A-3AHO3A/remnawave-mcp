@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { createHttpServer, loadHttpConfig } from '../dist/http.js';
 import { createServer } from '../dist/server.js';
 import { PII, user } from './helpers.mjs';
@@ -67,7 +69,7 @@ async function fixture(t) {
             return (await response.json()).result;
         } };
     }
-    return { request, initialize, session };
+    return { url, request, initialize, session };
 }
 
 test('HTTP config is opt-in and requires a separate key', () => {
@@ -124,4 +126,33 @@ test('HTTP sessions isolate pseudonym maps and node-job caches', async (t) => {
     assert.equal(data(await a.call('job')).cached, true);
     assert.equal(data(await b.call('job')).run, 2);
     assert.equal(data(await b.call('job')).cached, true);
+});
+
+test('a standard MCP SDK client can discover and call tools over HTTP', async (t) => {
+    const { url } = await fixture(t);
+    const client = new Client({ name: 'http-test', version: '1.0.0' });
+    const transport = new StreamableHTTPClientTransport(new URL(url), {
+        requestInit: { headers: auth },
+    });
+    try {
+        await client.connect(transport);
+        const { tools } = await client.listTools();
+        assert.ok(tools.some((tool) => tool.name === 'lookup'));
+        const result = await client.callTool({ name: 'lookup', arguments: {} });
+        assert.match(JSON.parse(result.content[0].text).users[0].username, /^user~/);
+        await transport.terminateSession();
+    } finally {
+        await client.close();
+    }
+});
+
+test('HTTP rejects malformed JSON and oversized request bodies', async (t) => {
+    const { url, request, initialize } = await fixture(t);
+    const headers = { ...auth, 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' };
+    const malformed = await fetch(url, { method: 'POST', headers, body: '{' });
+    assert.equal(malformed.status, 400);
+    await malformed.text();
+    const oversized = await request('POST', auth, { ...initialize, padding: 'x'.repeat(1024 * 1024) });
+    assert.equal(oversized.status, 413);
+    await oversized.text();
 });
