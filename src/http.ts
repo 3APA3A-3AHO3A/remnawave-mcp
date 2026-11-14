@@ -152,7 +152,7 @@ export function createHttpServer(cfg: HttpConfig, makeServer: () => Server) {
             await current.server.connect(transport);
             await transport.handleRequest(req, res, body);
         } catch (e) {
-            if (next) await closeSession(sessionId, next);
+            if (initialized && next) await closeSession(sessionId, next);
             throw e;
         } finally {
             if (!initialized) {
@@ -165,7 +165,7 @@ export function createHttpServer(cfg: HttpConfig, makeServer: () => Server) {
     const listener = createHttpListener({ requestTimeout: 30_000, headersTimeout: 15_000 }, (req, res) => {
         route(req, res).catch((e: unknown) => {
             if (e instanceof BodyError) {
-                if (e.status === 413) res.setHeader('Connection', 'close');
+                if (e.status === 413 && !res.headersSent) res.setHeader('Connection', 'close');
                 fail(res, e.status, e.message);
             } else fail(res, 500, 'Internal server error');
         });
