@@ -599,7 +599,7 @@ Also:
 $env:REMNAWAVE_BASE_URL="https://panel.example.com"; $env:REMNAWAVE_API_TOKEN="YOUR_TOKEN"; node dist/index.js
 ```
 
-A line like `remnawave-mcp 1.4.9: 91 tools, read-only, privacy strict, https://panel.example.com` (with several panels — `… 2 panels: main (https://…), second (https://…)`) means the server starts (it then waits for a client — stop it with `Ctrl+C`). An error instead — look it up in the table.
+A line like `remnawave-mcp 1.5.0: 91 tools, read-only, privacy strict, https://panel.example.com` (with several panels — `… 2 panels: main (https://…), second (https://…)`) means the server starts (it then waits for a client — stop it with `Ctrl+C`). An error instead — look it up in the table.
 
 | Symptom | Fix |
 |---|---|
