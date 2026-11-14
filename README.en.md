@@ -408,7 +408,59 @@ REMNAWAVE_API_TOKEN = "YOUR_TOKEN"
 
 </details>
 
-> ℹ️ **Not supported:** clients that only connect to remote MCP servers by URL (HTTP) — e.g. ChatGPT and web versions of assistants. remnawave-mcp runs on your computer or server and talks to the client directly (stdio).
+### Remote clients (Streamable HTTP)
+
+stdio remains the default. To enable HTTP, set `REMNAWAVE_TRANSPORT=http` and
+a separate Bearer token. The server refuses to start without a token.
+Use a random key (e.g. `openssl rand -hex 32`), **not the panel API token**.
+
+```bash
+export REMNAWAVE_BASE_URL=https://panel.example.com
+export REMNAWAVE_API_TOKEN=YOUR_PANEL_TOKEN
+export REMNAWAVE_HTTP_TOKEN="$(openssl rand -hex 32)"
+REMNAWAVE_TRANSPORT=http node dist/index.js
+```
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `REMNAWAVE_TRANSPORT` | `stdio` | `stdio` or `http` |
+| `REMNAWAVE_HTTP_HOST` | `127.0.0.1` | Listen address |
+| `REMNAWAVE_HTTP_PORT` | `3001` | HTTP port |
+| `REMNAWAVE_HTTP_TOKEN` | — | Required HTTP access key |
+
+In a client supporting Streamable HTTP and custom headers, use
+`http://127.0.0.1:3001/mcp` with `Authorization: Bearer <HTTP_TOKEN>`.
+OAuth and cloud clients that require OAuth are not supported yet.
+Browser requests with an Origin header are rejected.
+
+For remote access use an HTTPS reverse proxy (nginx snippet inside a TLS server block):
+
+```nginx
+location = /mcp {
+    proxy_pass http://127.0.0.1:3001;
+    proxy_http_version 1.1;
+    proxy_set_header Authorization $http_authorization;
+    proxy_buffering off;
+    proxy_read_timeout 1800s;
+    client_max_body_size 1m;
+}
+```
+
+With Docker explicitly set `REMNAWAVE_HTTP_HOST=0.0.0.0` **inside the container**
+and publish only to the host loopback (`-p 127.0.0.1:3001:3001`).
+Do not expose plain HTTP to the internet. Supply tokens through a protected env file.
+
+Each MCP session has its own pseudonym maps and caches. HTTP ignores
+`REMNAWAVE_PRIVACY_SALT`; pseudonyms do not carry over between sessions.
+Up to 32 sessions are allowed; sessions expire after 30 minutes of inactivity
+(checked once a minute). This is a shared access key, not multi-user authorization:
+any key holder can access all configured panels. Restrict access and rate-limit at the reverse proxy.
+
+**Warning:** read-only and strict privacy are the defaults. As with stdio,
+`REMNAWAVE_READONLY=false` enables writes and `REMNAWAVE_PRIVACY=off` disables
+masking. Leaking the HTTP token in write mode gives the holder write access to the panel.
+Avoid these modes unless necessary, use HTTPS and least-privilege panel tokens.
+
 >
 > Your client is not listed? Any client that can launch local MCP servers works: command `node`, the path to `dist/index.js` and two variables — `REMNAWAVE_BASE_URL` and `REMNAWAVE_API_TOKEN`.
 
