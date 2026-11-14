@@ -408,7 +408,59 @@ REMNAWAVE_API_TOKEN = "ВАШ_ТОКЕН"
 
 </details>
 
-> ℹ️ **Не подходят** клиенты, которые подключают только удалённые MCP-серверы по ссылке (HTTP) — например, ChatGPT и веб-версии ассистентов. remnawave-mcp запускается у вас на компьютере или сервере и общается с клиентом напрямую (stdio).
+### Удалённые клиенты (Streamable HTTP)
+
+По умолчанию ничего не меняется: сервер использует stdio. Для HTTP установите
+`REMNAWAVE_TRANSPORT=http` и отдельный Bearer-токен. Без токена сервер не запустится.
+Используйте случайный ключ (например, `openssl rand -hex 32`), **не токен панели**.
+
+```bash
+export REMNAWAVE_BASE_URL=https://panel.example.com
+export REMNAWAVE_API_TOKEN=YOUR_PANEL_TOKEN
+export REMNAWAVE_HTTP_TOKEN="$(openssl rand -hex 32)"
+REMNAWAVE_TRANSPORT=http node dist/index.js
+```
+
+| Переменная | По умолчанию | Назначение |
+|---|---|---|
+| `REMNAWAVE_TRANSPORT` | `stdio` | `stdio` или `http` |
+| `REMNAWAVE_HTTP_HOST` | `127.0.0.1` | Адрес прослушивания |
+| `REMNAWAVE_HTTP_PORT` | `3001` | Порт HTTP |
+| `REMNAWAVE_HTTP_TOKEN` | — | Обязательный ключ доступа в HTTP-режиме |
+
+В клиенте с поддержкой Streamable HTTP и пользовательских заголовков укажите
+`http://127.0.0.1:3001/mcp` и заголовок `Authorization: Bearer <HTTP_TOKEN>`.
+OAuth и подключение облачных клиентов, требующих OAuth, пока не поддерживаются.
+Браузерные запросы с заголовком Origin отклоняются.
+
+Для удалённого доступа используйте HTTPS reverse proxy (пример фрагмента nginx внутри TLS server):
+
+```nginx
+location = /mcp {
+    proxy_pass http://127.0.0.1:3001;
+    proxy_http_version 1.1;
+    proxy_set_header Authorization $http_authorization;
+    proxy_buffering off;
+    proxy_read_timeout 1800s;
+    client_max_body_size 1m;
+}
+```
+
+Для Docker можно явно установить `REMNAWAVE_HTTP_HOST=0.0.0.0` **внутри контейнера**
+и опубликовать порт только на loopback хоста (`-p 127.0.0.1:3001:3001`).
+Не публикуйте HTTP без TLS в интернет. Передавайте ключи через защищённый env-файл.
+
+Каждая MCP-сессия получает собственные карты псевдонимов и кэши. В HTTP-режиме
+`REMNAWAVE_PRIVACY_SALT` игнорируется, псевдонимы не переносятся между сессиями.
+Лимит — 32 сессии, сессии удаляются после 30 минут без активности (проверка раз в минуту).
+Ключ доступа общий: это не многопользовательская авторизация; любой владелец ключа
+получает доступ ко всем настроенным панелям. Ограничивайте доступ и частоту запросов на reverse proxy.
+
+**Внимание:** по умолчанию действуют read-only и strict privacy. Как и в stdio,
+`REMNAWAVE_READONLY=false` включает запись, а `REMNAWAVE_PRIVACY=off` отключает
+маскирование. Утечка HTTP-ключа в режиме записи означает доступ к изменению панели.
+Не включайте эти режимы без необходимости, используйте HTTPS и минимальные права токена панели.
+
 >
 > Нет вашего клиента в списке? Подойдёт любой, который умеет запускать локальные MCP-серверы: укажите команду `node`, путь к `dist/index.js` и две переменные — `REMNAWAVE_BASE_URL` и `REMNAWAVE_API_TOKEN`.
 
