@@ -676,6 +676,8 @@ npm run pack:mcpb -- --all  # for every 3.x version → build/remnawave-3.0.mcpb
 
 Inspired by [TrackLine/mcp-remnawave](https://github.com/TrackLine/mcp-remnawave) (Remnawave 2.x).
 
+Streamable HTTP mode for remote clients — [Ivan Zorin (@localzet)](https://github.com/localzet), [#24](https://github.com/3APA3A-3AHO3A/remnawave-mcp/pull/24).
+
 ## License
 
 [MIT](LICENSE)
