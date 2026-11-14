@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.9 — 2026-11-14
+- **Remnawave 3.4.11.** Контракт `@remnawave/backend-contract` 3.4.10 → 3.4.11. В панели появились метки (теги) у профилей конфигураций, внешних и внутренних сквадов, плагинов нод, страниц подписки и шаблонов подписок — 12 новых команд:
+  - чтение: `get_config_profiles_tags`, `get_external_squads_tags`, `get_internal_squads_tags`, `get_node_plugins_tags`, `get_subpage_configs_tags`, `get_subscription_templates_tags`;
+  - запись (только при включённой записи): `set_config_profile_tags`, `set_external_squad_tags`, `set_internal_squad_tags`, `set_node_plugin_tags`, `set_subpage_config_tags`, `set_subscription_template_tags`.
+- В режиме чтения теперь 84 API-команды + 7 дополнительных. Новых прав API-токена не нужно: команды меток входят в те же разделы.
+
+75 автотестов.
+
 ## 1.4.8 — 2026-11-13
 - **Remnawave 3.4.10.** Контракт `@remnawave/backend-contract` 3.4.8 → 3.4.10 (3.4.9 пропущена). Набор команд не изменился — 78 API + 7 дополнительных.
 - `npm audit`: 0 уязвимостей. Обновлены вложенные зависимости MCP SDK `hono` и `@hono/node-server` (GHSA-qv5m-9pm6-hqp3, GHSA-jpvv-r467-5p4w). MCP работает через stdio, HTTP-сервер hono не запускается, так что на практике это не задевало.
